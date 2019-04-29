@@ -1,0 +1,144 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:13
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\main_rtc.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\main_rtc.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\main_rtc.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\main_rtc.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\main_rtc.c
+      1          #include "stm8l15x.h"
+      2          #include "main.h"
+      3          #include "ModuleProtocol.h"
+      4          #include <stdio.h>
+      5          #include <stdlib.h>
+      6          #include "string.h"
+      7          #include "stm8l15x_rtc.h"
+      8          
+      9          extern RTC_TimeTypeDef   RTC_TimeStr;
+     10          extern RTC_DateTypeDef   RTC_DateStr;
+     11          
+     12          void stop_rtc_wake(void)
+     13          {
+     14          	
+     15          	RTC_ITConfig(RTC_IT_WUT, DISABLE);
+     16          	RTC_WakeUpCmd(DISABLE);
+     17          }
+     18          
+     19          void set_rtc_wake_time(uint16 period)
+     20          {
+     21          	stop_rtc_wake();
+     22          	/* Configures the RTC wakeup timer_step = RTCCLK/16 = LSE/16 = 488.28125 us */
+     23          	RTC_WakeUpClockConfig(RTC_WakeUpClock_RTCCLK_Div16);
+     24          	
+     25          	/* Enable wake up unit Interrupt */
+     26          	RTC_ITConfig(RTC_IT_WUT, ENABLE);
+     27          	
+     28          	/* Enable general Interrupt*/
+     29          	enableInterrupts();
+     30          	
+     31          	/* RTC wake-up event every 500 ms (timer_step x (1023 + 1) )*/
+     32          	//	RTC_SetWakeUpCounter(1023);
+     33          	RTC_SetWakeUpCounter(period);
+     34          	
+     35          	RTC_WakeUpCmd(ENABLE);
+     36          }
+     37          
+     38          void Calendar_Init(void)
+     39          {
+     40          	RTC_InitTypeDef   RTC_InitStr;
+     41          	
+     42          	RTC_InitStr.RTC_HourFormat = RTC_HourFormat_24;
+     43          	RTC_InitStr.RTC_AsynchPrediv = 0x7F;
+     44          	RTC_InitStr.RTC_SynchPrediv = 0x00FF;
+     45          	RTC_Init(&RTC_InitStr);
+     46          	
+     47          	RTC_TimeStructInit(&RTC_TimeStr);
+     48          	RTC_TimeStr.RTC_Hours   = 0x10;
+     49          	RTC_TimeStr.RTC_Minutes = 00;
+     50          	RTC_TimeStr.RTC_Seconds = 00;
+     51          	RTC_SetTime(RTC_Format_BIN, &RTC_TimeStr);
+     52          	
+     53          	RTC_DateStr.RTC_Year   = 19;
+     54          	RTC_DateStr.RTC_Month = RTC_Month_January;
+     55          	RTC_DateStr.RTC_Date = 1;
+     56          	RTC_SetDate(RTC_Format_BIN, &RTC_DateStr);
+     57          }
+     58          
+     59          
+     60          void RTC_Config_Init(void)
+     61          {
+     62          	/* Enable LSE */
+     63          	CLK_LSEConfig(CLK_LSE_ON);
+     64          	/* Wait for LSE clock to be ready */
+     65          	while (CLK_GetFlagStatus(CLK_FLAG_LSERDY) == RESET);
+     66          	
+     67          	/* wait for 1 second for the LSE Stabilisation */
+     68          //	LSE_StabTime();
+     69          	
+     70          	/* Select LSE (32.768 KHz) as RTC clock source */
+     71          	CLK_RTCClockConfig(CLK_RTCCLKSource_LSE, CLK_RTCCLKDiv_1);
+     72          	
+     73          	CLK_PeripheralClockConfig(CLK_Peripheral_RTC, ENABLE);
+     74          	while (RTC_WaitForSynchro() != SUCCESS);
+     75          	/* Calendar Configuration */
+     76          	Calendar_Init();         //设置时钟的格式
+     77          	
+     78          	/*RTC Tamper Configuration*/
+     79          	//  Tamper_Init();
+     80          	
+     81          }
+     82          
+     83          void set_time(uint8 *time)
+     84          {
+     85          	RTC_TimeStructInit(&RTC_TimeStr);
+     86          	RTC_TimeStr.RTC_Hours   = time[0];
+     87          	RTC_TimeStr.RTC_Minutes = time[1];
+     88          	RTC_TimeStr.RTC_Seconds = time[2];
+     89          	RTC_SetTime(RTC_Format_BIN, &RTC_TimeStr);
+     90          }
+     91          
+     92          void set_date(uint8 *date)
+     93          {
+     94          	RTC_DateStr.RTC_Year   = date[0];
+     95          	RTC_DateStr.RTC_Month = (RTC_Month_TypeDef)date[1];
+     96          	RTC_DateStr.RTC_Date = date[2];
+     97          	RTC_SetDate(RTC_Format_BIN, &RTC_DateStr);
+     98          }
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      72  Calendar_Init
+      47  RTC_Config_Init
+      40  set_date
+      41  set_rtc_wake_time
+      47  set_time
+      14  stop_rtc_wake
+
+ 
+ 261 bytes in section .far_func.text
+ 
+ 261 bytes of CODE memory
+
+Errors: none
+Warnings: none

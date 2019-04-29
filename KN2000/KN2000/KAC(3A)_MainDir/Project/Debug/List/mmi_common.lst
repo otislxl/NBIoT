@@ -1,0 +1,295 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:13
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\mmi_common.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\mmi_common.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\mmi_common.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\mmi_common.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\mmi_common.c
+      1          #include "mmi_common.h"
+      2          
+      3          //数字转bcd码
+      4          uint8 BinToBcd(uint8 bin_data)
+      5          {	
+      6          	if (bin_data > 99)
+      7          		bin_data = bin_data%100;
+      8          	return ((bin_data/10)<<4) + (bin_data%10);
+      9          }
+     10          uint8 BcdToBin(uint8 bcd_data)
+     11          {	
+     12          	return (bcd_data>>4)*10+(bcd_data&0x0f);
+     13          }
+     14          
+     15          /* 16进制转换成ASCALL 码*/
+     16          char BinToAsc(char bin_data)
+     17          {
+     18          	bin_data &= 0x0f;
+     19              	if(bin_data < 0x0a)
+     20              		bin_data += '0';
+     21              	else 
+     22              	{
+     23              		bin_data -= 10;
+     24              		bin_data += 'A';
+     25              	}	
+     26              	return bin_data;
+     27          }
+     28          
+     29          /* ASCALL 码转换成16进制*/
+     30          uint8 AsctoBin(uint8 asc_data)
+     31          {
+     32              if ((asc_data>='0')&&(asc_data<='9'))
+     33                  return asc_data-'0';
+     34              else if ((asc_data>='a')&&(asc_data<='f'))
+     35                  return (asc_data-'a') + 0x0a;
+     36              else if ((asc_data>='A')&&(asc_data<='F'))
+     37                  return (asc_data-'A') + 0x0a;
+     38              
+     39              return 0;
+     40          }
+     41          
+     42          uint8  AciiToHex(char *buf)
+     43          {
+     44          	uint8 temp0,temp1,temp;
+     45          	if (buf[0]>=0x41) 
+     46          		temp0=(buf[0]-0x37);
+     47          	else 
+     48          		temp0=buf[0]-0x30;
+     49          	if (buf[1]>=0x41) 
+     50          		temp1=(buf[1]-0x37);
+     51          	else 
+     52          		temp1=buf[1]-0x30;
+     53          	temp=(temp0<<4) + temp1;
+     54          	return temp;
+     55          }
+     56          
+     57          uint8 StrToBcd(uint8 *buf)
+     58          {
+     59          	uint8 temp;
+     60          	temp =(buf[0]-0x30)<<4;
+     61          	if (buf[1]==0) 
+     62          		temp +=0xf;
+     63          	else 
+     64          		temp+=(buf[1]-0x30);
+     65          	return temp;
+     66          }
+     67          
+     68          //bcd转字符串
+     69          uint8  BcdHexToString(uint8 *in,uint8 inlen,uint8 *out)
+     70          {
+     71            uint8 i,temp,nLen=0;
+     72            for (i=0;i<inlen;i++)
+     73            {
+     74          	  temp=(in[i]>>4) & 0xf;
+     75          	  if (temp !=0xf)
+     76          	  {
+     77          		out[2*i]=temp+0x30;
+     78          		nLen++;
+     79          	  }
+     80          	  else
+     81          	  {
+     82          		out[2*i]=0;
+     83          		break;
+     84          	  }
+     85          	
+     86          	  temp=in[i] & 0xf;
+     87          	  if (temp !=0xf)
+     88          	  {
+     89          		  out[2*i+1]=temp+0x30;
+     90          		  nLen++;
+     91          	  }
+     92          	  else
+     93          	  {
+     94          		out[2*i+1]=0;
+     95          		break;
+     96          	  }
+     97          
+     98            }
+     99          
+    100            return nLen;
+    101          }
+    102          
+    103          /* ASCALL 码转换成BCD码
+    104          * == A	# == B
+    105          P == C   W == D
+    106          + == E
+    107          */
+    108          bool TransfromStrToBcd(
+    109          							 uint8             *bcd_ptr,  // out: called BCD number array
+    110          							 uint8             *length_ptr, // out: the BCD array length
+    111          							 uint8              *tel_str,     // in:  telephone number string
+    112          							 uint8             str_length   // in: telephone number string length
+    113          							 )  
+    114          {
+    115          	uint16 i = 0;
+    116          	
+    117          	*length_ptr = (uint8)((str_length+1) / 2);
+    118          	
+    119          	for(i=0; i < *length_ptr; i++)
+    120          	{
+    121          		switch (*tel_str)
+    122          		{
+    123          		case '*':
+    124          			bcd_ptr[i] = 0x0A;
+    125          			break;
+    126          		case '#':
+    127          			bcd_ptr[i] = 0x0B;
+    128          			break;
+    129          /*+cr224281*/			
+    130          		case 'p':
+    131          		case 'P':
+    132          			bcd_ptr[i] = 0x0C;
+    133          			break;
+    134          		case 'W':
+    135          		case 'w':
+    136          			bcd_ptr[i] = 0x0D;
+    137          			break;
+    138          		case '+':
+    139          			bcd_ptr[i] = 0x0E;
+    140          			break;
+    141          /*-cr224281*/
+    142          		default:
+    143          			if (*tel_str >= '0' && *tel_str <= '9')
+    144          			{
+    145          				bcd_ptr[i] = (uint8)(*tel_str - '0');
+    146          			}
+    147          			else
+    148          			{
+    149          				return FALSE;
+    150          			}
+    151          			break;
+    152          		}
+    153          		
+    154          		
+    155          		tel_str++;
+    156          		
+    157          		switch (*tel_str)
+    158          		{
+    159          		case '*':
+    160          			//bcd_ptr[i] += 0xA0;
+    161          			bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4)) + 0x0A;
+    162          			break;
+    163          		case '#':
+    164          			//bcd_ptr[i] += 0xB0;
+    165          			bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4)) + 0x0B;
+    166          			break;
+    167          /*+cr224281*/				
+    168          		case 'p':
+    169          		case 'P':
+    170          			//bcd_ptr[i] += 0xC0;
+    171          			bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4)) + 0x0C;
+    172          			break;
+    173          		case 'w':
+    174          		case 'W':
+    175          			//bcd_ptr[i] += 0xD0;
+    176          			bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4)) + 0x0D;
+    177          			break;
+    178          		case '+':
+    179          			//bcd_ptr[i] += 0xE0;
+    180          			bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4)) + 0x0E;
+    181          			break;
+    182          /*-cr224281*/			
+    183          		case '\0':
+    184          		case 0x0f:
+    185          			//bcd_ptr[i] += 0xF0;
+    186          			bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4)) + 0x0F;
+    187          			break;
+    188          		default:
+    189          			if ((*tel_str >= '0') && 
+    190          				(*tel_str <= '9'))
+    191          			{
+    192          				bcd_ptr[i] = ((uint8)(bcd_ptr[i]<<4) + (*tel_str - '0'));
+    193          			}
+    194          			else
+    195          			{
+    196          				return FALSE;
+    197          			}
+    198          			break;
+    199          		}
+    200          		tel_str++;
+    201          	}
+    202          	return TRUE;
+    203          }
+    204          
+    205          /* BCD 转换成10进制/16进制*/
+    206          void BcdToDec(
+    207          						uint8 *bcd_code,
+    208          						uint8 bcd_len,
+    209          						uint8 *dec_code
+    210          						)
+    211          {	
+    212          	uint8 i;
+    213          	for(i=0; i<bcd_len; i++)
+    214          	{
+    215          		*dec_code++ = ((*bcd_code) >> 4)*10 + (*bcd_code & 0x0f);
+    216          		bcd_code++;
+    217          	}
+    218          }
+    219          
+    220          //字符串转十进制数字
+    221          int    GetIntFromBuf(char *buf)
+    222          {
+    223          	int symbol = 1;
+    224          	int i=0,Temp=0,Flag=0;
+    225          	if(buf[i] == '-')
+    226          	{
+    227          		symbol = -1;
+    228          		i ++;
+    229          	}
+    230          	for (;i<10;i++)
+    231          	{
+    232          		if (buf[i]>='0' && buf[i]<='9')
+    233          		{
+    234          			Temp = (Temp*10) + buf[i]-'0';
+    235          			
+    236          			Flag=1;
+    237          		}
+    238          		else break;
+    239          	}
+    240          	
+    241          	if (Flag==0)  return -1;
+    242          	
+    243          	return (symbol*Temp);
+    244          }
+    245          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      61  AciiToHex
+      58  AsctoBin
+     142  BcdHexToString
+      26  BcdToBin
+      56  BcdToDec
+      15  BinToAsc
+      43  BinToBcd
+     129  GetIntFromBuf
+      37  StrToBcd
+     412  TransfromStrToBcd
+
+ 
+ 979 bytes in section .far_func.text
+ 
+ 979 bytes of CODE memory
+
+Errors: none
+Warnings: none

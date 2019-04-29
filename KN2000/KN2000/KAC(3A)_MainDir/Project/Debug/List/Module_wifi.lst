@@ -1,0 +1,252 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:13
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Module_wifi.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Module_wifi.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\Module_wifi.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\Module_wifi.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Module_wifi.c
+      1          #include "stm8l15x.h"
+      2          #include "sysdefs.h"
+      3          #include <stdio.h>
+      4          #include "string.h"
+      5          #include "uart1.h"
+      6          #include "defineconst.h"
+      7          #include "Module_wifi.h"
+      8          #include "hwdgpio.h"
+      9          #include "main.h"
+     10          
+     11          #define WIFI_REV_MAX   		50
+     12          #define WIFI_AT_MAX   		100
+     13          
+     14          uint8 wifi_rx[WIFI_REV_MAX];
+     15          uint8 wifi_rx_read;	
+     16          uint8 wifi_rx_write;	
+     17          
+     18          WIFIMODULEINFO  WIFIinfo;
+     19          char WifiComRecBuf[WIFI_AT_MAX];
+     20          uint16 WifiComRecLen=0;
+     21          uint8 WifiSendId=0xff;              			//当前发送的at指令id号
+     22          uint16 WifiDelayTime=0;				//AT指令等待时间
+     23          uint8 WifiDataErrorTime = 0;
+     24          	
+     25          //WIFI模块初始化
+     26          void WIFI_Module_Init(void)
+     27          {
+     28            	GPIO_Init(WIFI_KEYPOWER_T, WIFI_KEYPOWER_P, GPIO_Mode_Out_PP_Low_Slow);
+     29            	GPIO_Init(WIFI_RESET_T, WIFI_RESET_P, GPIO_Mode_Out_PP_Low_Slow);
+     30          }
+     31          
+     32          void Set_WIFI_IO_RESETGpio(unsigned char flag)
+     33          {
+     34          	if(flag==1)
+     35          		GPIO_SetBits(WIFI_RESET_T,WIFI_RESET_P);
+     36          	else 
+     37          		GPIO_ResetBits(WIFI_RESET_T,WIFI_RESET_P);
+     38          }
+     39          
+     40          //WIFI模块初始化
+     41          void WifiModuleResetInit(void)
+     42          {
+     43          	memset(WIFIinfo.IMEI,0,sizeof(WIFIinfo.IMEI));
+     44          	WIFIinfo.AtUARTE=0;
+     45          	WIFIinfo.SendFlag=0;
+     46          	WIFIinfo.IniEndFlag=0;
+     47          	WifiComRecLen = 0;
+     48          	wifi_rx_read = 0;
+     49          	wifi_rx_write = 0;
+     50          }
+     51          
+     52          //模块硬复位处理
+     53          void WIFI_ModuleReset(void)
+     54          {
+     55          	Set_WIFI_IO_RESETGpio(0);
+     56          	delay_ms(500);
+     57          	Set_WIFI_IO_RESETGpio(1); 
+     58          	WifiModuleResetInit();  			 //重新对模块进行初始化
+     59          }
+     60          
+     61          //串口2中断接收数据处理
+     62          void UART2_ISR(uint8 data)
+     63          {   
+     64          	uint8 tempw;
+     65          	wifi_rx[wifi_rx_write] = data;
+     66          	tempw=(wifi_rx_write + 1) % WIFI_REV_MAX;
+     67          
+     68          	if (tempw==wifi_rx_read)
+     69          	{
+     70                 //接收缓冲区满
+     71          		return ;
+     72          	}
+     73          	else
+     74          	{
+     75          		wifi_rx_write=tempw;
+     76          	}
+     77          }
+     78          
+     79          //WIFI模块AT指令处理
+     80          char WifiAtComFormMoudle(void)
+     81          {
+     82          	uint8 preAP[35]={0};
+     83          	uint8 tmp;
+     84              
+     85          	if (wifi_rx_read !=wifi_rx_write)
+     86          	{
+     87          		WifiComRecBuf[WifiComRecLen]=wifi_rx[wifi_rx_read];
+     88          		wifi_rx_read = (wifi_rx_read+1) % WIFI_REV_MAX;
+     89          		if(WifiComRecLen < (WIFI_AT_MAX-1))
+     90          			WifiComRecLen++;
+     91          		else
+     92          			WifiComRecLen = 0;
+     93          	}
+     94          	else 
+     95          		return 0;
+     96          	tmp = WifiComRecBuf[WifiComRecLen-1];
+     97          	if ((tmp ==0xa ) || (tmp ==0xd ))
+     98          	{
+     99          		WifiComRecBuf[WifiComRecLen]=0;
+    100          		if (WifiComRecLen>2)
+    101          		{
+    102          			if (!memcmp("ERROR",WifiComRecBuf,strlen("ERROR")))
+    103          			 {
+    104          				WifiDataErrorTime ++;
+    105          				if(WifiDataErrorTime > 10)
+    106          				{
+    107          					//复位模块
+    108          					WIFI_ModuleReset();
+    109          					WifiDataErrorTime = 0;
+    110          				}
+    111          			 }
+    112          			 else
+    113          			 {
+    114          			 	WifiDataErrorTime = 0;
+    115          				if((WifiSendId!=AT_WSCAN)
+    116          					&&(WifiSendId!=ATE0)
+    117          					)
+    118          				{
+    119          					if(AtDelayTime > 3)
+    120          						AtDelayTime = 3;
+    121          				}
+    122          			 }
+    123          			if (!memcmp(preAP,WifiComRecBuf,strlen((char*)preAP))&&strlen((char*)preAP)>0)  //
+    124          			{
+    125          				if (WifiSendId==AT_WSCAN)
+    126          				{
+    127          					  WIFIinfo.Csq=GetIntFromBuf(&WifiComRecBuf[strlen((char*)preAP)]);   //-42强 -58 弱
+    128          					if (WIFIinfo.Csq>100) 
+    129          						WIFIinfo.Csq=100;
+    130          					if(AtDelayTime > 3)
+    131          						AtDelayTime = 3;
+    132          				}
+    133          			}
+    134          			else if (!memcmp("+WMAC:",WifiComRecBuf,strlen("+WMAC:")))  //IMEI
+    135          			{
+    136          				//+WMAC:B0F89340375E
+    137          					memcpy(WIFIinfo.IMEI,&WifiComRecBuf[strlen("+WMAC:")],12);
+    138          			}
+    139          			 else if (!memcmp("OK",WifiComRecBuf,strlen("OK")))
+    140          			 {
+    141          
+    142          				 if(WifiSendId==ATE0) 
+    143          				 {
+    144          				 	WIFIinfo.AtUARTE=1;
+    145          					AtDelayTime = 10;
+    146          				 }
+    147          			 }
+    148          		}        
+    149          		WifiComRecLen=0;
+    150          	}
+    151          	return  1;
+    152          }
+    153          
+    154          //WIFI模块参数初始化
+    155          uint8 WifiModuleIniDisp(void)
+    156          {  
+    157             if (WIFIinfo.SendFlag==0)
+    158             {
+    159               	 if (WIFIinfo.AtUARTE==0)
+    160          	 {
+    161          		 WifiSendId=ATE0;
+    162          		 UART2_SendStr((uint8*)"ATE0\r\n",strlen("ATE0\r\n"));
+    163          		 WIFIinfo.SendFlag=1;   
+    164          	 }
+    165          	 else if (strlen((char*)WIFIinfo.IMEI)==0)
+    166          	 {
+    167          		 //查询模块的MAC号
+    168          		WifiSendId=ATWMAC;
+    169          		UART2_SendStr((uint8*)"AT+WMAC?\r\n",strlen("AT+WMAC?\r\n"));
+    170          		WIFIinfo.SendFlag=1;
+    171          	 }
+    172          	if(WIFIinfo.SendFlag==1)
+    173          	{
+    174          		if(WifiDelayTime < 100)
+    175          			WifiDelayTime = 100;
+    176          	}
+    177          	else
+    178          		return 1;
+    179          	}
+    180          
+    181              return 0;
+    182          
+    183          }
+    184          
+    185          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      35  ?_0
+       6  ?_1
+       7  ?_2
+       3  ?_3
+       7  ?_4
+      11  ?_5
+      35  Set_WIFI_IO_RESETGpio
+      45  UART2_ISR
+      23  WIFI_ModuleReset
+      27  WIFI_Module_Init
+      20  WIFIinfo
+     373  WifiAtComFormMoudle
+     100  WifiComRecBuf
+       2  WifiComRecLen
+       1  WifiDataErrorTime
+       2  WifiDelayTime
+      93  WifiModuleIniDisp
+      39  WifiModuleResetInit
+       1  WifiSendId
+      50  wifi_rx
+       1  wifi_rx_read
+       1  wifi_rx_write
+
+ 
+ 635 bytes in section .far_func.text
+ 177 bytes in section .near.bss
+   1 byte  in section .near.data
+  69 bytes in section .near.rodata
+ 
+ 635 bytes of CODE  memory
+  69 bytes of CONST memory
+ 178 bytes of DATA  memory
+
+Errors: none
+Warnings: none

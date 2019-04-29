@@ -1,0 +1,99 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:12
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\hwdgpio.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\hwdgpio.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\hwdgpio.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\hwdgpio.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\hwdgpio.c
+      1          #include "hwdgpio.h"
+      2          #include "stm8l15x.h"
+      3          #include "stm8l15x_gpio.h"
+      4          #include <stdio.h>
+      5          #include <stdlib.h>
+      6          #include "string.h"
+      7          #include "i2c.h"
+      8          //控制模块复位
+      9          void NB_IO_RESETGPIO_INI(void)
+     10          {
+     11            	GPIO_Init(NB_POWKEY_T, NB_POWKEY_P, GPIO_Mode_Out_PP_Low_Slow);
+     12            	GPIO_Init(NB_RESET_T, NB_RESET_P, GPIO_Mode_Out_PP_Low_Slow);
+     13            	GPIO_Init(NB_WAKE_T, NB_WAKE_P, GPIO_Mode_Out_PP_High_Slow);
+     14          }
+     15          
+     16          void SetNB_IO_RESETGpio(unsigned char flag)
+     17          {
+     18          
+     19          	if(flag==1)
+     20          		GPIO_SetBits(NB_RESET_T,NB_RESET_P);
+     21          	else 
+     22                    GPIO_ResetBits(NB_RESET_T,NB_RESET_P);
+     23          }
+     24          void LightenLed(unsigned char color)
+     25          {
+     26          	if(color==REDLED)
+     27          		GPIO_SetBits(LIGHT_CHANGE_T,CHARGER_INT_P);
+     28          	else if(color==GREENLED)
+     29          		GPIO_SetBits(LIGHT_GREEN_T,LIGHT_GREEN_P);
+     30          }
+     31          void ExtinguishLed(unsigned char color)
+     32          {
+     33          	if(color==REDLED)
+     34          		GPIO_ResetBits(LIGHT_CHANGE_T,LIGHT_CHANGE_P);
+     35          	else if(color==GREENLED)
+     36          		GPIO_ResetBits(LIGHT_GREEN_T,LIGHT_GREEN_P);
+     37          }
+     38          /* GPIO 初始化*/
+     39          void hw_board_gpio_init(void)
+     40          {
+     41          	//初始化NB的gpio
+     42          	NB_IO_RESETGPIO_INI();
+     43          	//初始化WIFI的gpio
+     44          	WIFI_Module_Init();
+     45          
+     46          	GPIO_Init(USB_DET_T, USB_DET_P, GPIO_Mode_In_FL_No_IT);
+     47          
+     48            	GPIO_Init(CHARGER_INT_T, CHARGER_INT_P, GPIO_Mode_In_FL_No_IT);
+     49          
+     50            	GPIO_Init(LIGHT_GREEN_T, LIGHT_GREEN_P, GPIO_Mode_Out_PP_Low_Slow);
+     51          
+     52            	GPIO_Init(LIGHT_CHANGE_T, LIGHT_CHANGE_P, GPIO_Mode_Out_PP_Low_Slow);
+     53          }
+     54          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      39  ExtinguishLed
+      39  LightenLed
+      40  NB_IO_RESETGPIO_INI
+      35  SetNB_IO_RESETGpio
+      57  hw_board_gpio_init
+
+ 
+ 210 bytes in section .far_func.text
+ 
+ 210 bytes of CODE memory
+
+Errors: none
+Warnings: 1

@@ -1,0 +1,610 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:09:20
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\bma2x2_support.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\bma2x2_support.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\bma2x2_support.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\bma2x2_support.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\bma2x2_support.c
+      1          /*
+      2          ****************************************************************************
+      3          * Copyright (C) 2015 - 2016 Bosch Sensortec GmbH
+      4          *
+      5          * bma2x2_support.c
+      6          * Date: 2016/03/09
+      7          * Revision: 1.0.4 $
+      8          *
+      9          * Usage: Sensor Driver support file for  BMA2x2 sensor
+     10          *
+     11          ****************************************************************************
+     12          * Disclaimer
+     13          *
+     14          * Common:
+     15          * Bosch Sensortec products are developed for the consumer goods industry.
+     16          * They may only be used within the parameters of the respective valid
+     17          * product data sheet.  Bosch Sensortec products are provided with the
+     18          * express understanding that there is no warranty of fitness for a
+     19          * particular purpose.They are not fit for use in life-sustaining,
+     20          * safety or security sensitive systems or any system or device
+     21          * that may lead to bodily harm or property damage if the system
+     22          * or device malfunctions. In addition,Bosch Sensortec products are
+     23          * not fit for use in products which interact with motor vehicle systems.
+     24          * The resale and or use of products are at the purchasers own risk and
+     25          * his own responsibility. The examination of fitness for the intended use
+     26          * is the sole responsibility of the Purchaser.
+     27          *
+     28          * The purchaser shall indemnify Bosch Sensortec from all third party
+     29          * claims, including any claims for incidental, or consequential damages,
+     30          * arising from any product use not covered by the parameters of
+     31          * the respective valid product data sheet or not approved by
+     32          * Bosch Sensortec and reimburse Bosch Sensortec for all costs in
+     33          * connection with such claims.
+     34          *
+     35          * The purchaser must monitor the market for the purchased products,
+     36          * particularly with regard to product safety and inform Bosch Sensortec
+     37          * without delay of all security relevant incidents.
+     38          *
+     39          * Engineering Samples are marked with an asterisk (*) or (e).
+     40          * Samples may vary from the valid technical specifications of the product
+     41          * series. They are therefore not intended or fit for resale to third
+     42          * parties or for use in end products. Their sole purpose is internal
+     43          * client testing. The testing of an engineering sample may in no way
+     44          * replace the testing of a product series. Bosch Sensortec assumes
+     45          * no liability for the use of engineering samples.
+     46          * By accepting the engineering samples, the Purchaser agrees to indemnify
+     47          * Bosch Sensortec from all claims arising from the use of engineering
+     48          * samples.
+     49          *
+     50          * Special:
+     51          * This software module (hereinafter called "Software") and any information
+     52          * on application-sheets (hereinafter called "Information") is provided
+     53          * free of charge for the sole purpose to support your application work.
+     54          * The Software and Information is subject to the following
+     55          * terms and conditions:
+     56          *
+     57          * The Software is specifically designed for the exclusive use for
+     58          * Bosch Sensortec products by personnel who have special experience
+     59          * and training. Do not use this Software if you do not have the
+     60          * proper experience or training.
+     61          *
+     62          * This Software package is provided `` as is `` and without any expressed
+     63          * or implied warranties,including without limitation, the implied warranties
+     64          * of merchantability and fitness for a particular purpose.
+     65          *
+     66          * Bosch Sensortec and their representatives and agents deny any liability
+     67          * for the functional impairment
+     68          * of this Software in terms of fitness, performance and safety.
+     69          * Bosch Sensortec and their representatives and agents shall not be liable
+     70          * for any direct or indirect damages or injury, except as
+     71          * otherwise stipulated in mandatory applicable law.
+     72          *
+     73          * The Information provided is believed to be accurate and reliable.
+     74          * Bosch Sensortec assumes no responsibility for the consequences of use
+     75          * of such Information nor for any infringement of patents or
+     76          * other rights of third parties which may result from its use.
+     77          * No license is granted by implication or otherwise under any patent or
+     78          * patent rights of Bosch. Specifications mentioned in the Information are
+     79          * subject to change without notice.
+     80          **************************************************************************/
+     81          /*---------------------------------------------------------------------------*/
+     82          /* Includes*/
+     83          /*---------------------------------------------------------------------------*/
+     84          #include "bma2x2.h"
+     85          #include "i2c.h"
+     86          /*----------------------------------------------------------------------------*
+     87          *	The following functions are used for reading and writing of
+     88          *	sensor data using I2C or SPI communication
+     89          *----------------------------------------------------------------------------*/
+     90          #ifdef BMA2x2_API
+     91           /*	\Brief: The function is used as I2C bus read
+     92           *	\Return : Status of the I2C read
+     93           *	\param dev_addr : The device address of the sensor
+     94           *	\param reg_addr : Address of the first register,
+     95           *               will data is going to be read
+     96           *	\param reg_data : This data read from the sensor,
+     97           *               which is hold in an array
+     98           *	\param cnt : The no of byte of data to be read
+     99           */
+    100          s8 BMA2x2_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+    101           /*	\Brief: The function is used as I2C bus write
+    102           *	\Return : Status of the I2C write
+    103           *	\param dev_addr : The device address of the sensor
+    104           *	\param reg_addr : Address of the first register,
+    105           *              will data is going to be written
+    106           *	\param reg_data : It is a value hold in the array,
+    107           *		will be used for write the value into the register
+    108           *	\param cnt : The no of byte of data to be write
+    109           */
+    110          s8 BMA2x2_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+    111          /* \Brief: The function is used as SPI bus write
+    112           * \Return : Status of the SPI write
+    113           * \param dev_addr : The device address of the sensor
+    114           * \param reg_addr : Address of the first register,
+    115           *      will data is going to be written
+    116           * \param reg_data : It is a value hold in the array,
+    117           *	will be used for write the value into the register
+    118           * \param cnt : The no of byte of data to be write
+    119           */
+    120          s8 BMA2x2_SPI_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+    121          /* \Brief: The function is used as SPI bus read
+    122           * \Return : Status of the SPI read
+    123           * \param dev_addr : The device address of the sensor
+    124           * \param reg_addr : Address of the first register,
+    125           *   will data is going to be read
+    126           * \param reg_data : This data read from the sensor, which is hold in an array
+    127           * \param cnt : The no of byte of data to be read */
+    128          s8 BMA2x2_SPI_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+    129          /*
+    130           * \Brief: SPI/I2C init routine
+    131          */
+    132          s8 I2C_routine(void);
+    133          s8 SPI_routine(void);
+    134          #endif
+    135          /********************End of I2C/SPI function declarations*******************/
+    136          /*	Brief : The delay routine
+    137           *	\param : delay in ms
+    138           */
+    139          void BMA2x2_delay_msek(u32 msek);
+    140          /*!
+    141           *	@brief This function is an example for delay
+    142           *	@param : None
+    143           *	@return : communication result
+    144           */
+    145          s32 bma2x2_data_readout_template(void);
+    146          /*----------------------------------------------------------------------------*
+    147          *  struct bma2x2_t parameters can be accessed by using bma2x2
+    148           *	bma2x2_t having the following parameters
+    149           *	Bus write function pointer: BMA2x2_WR_FUNC_PTR
+    150           *	Bus read function pointer: BMA2x2_RD_FUNC_PTR
+    151           *	Burst read function pointer: BMA2x2_BRD_FUNC_PTR
+    152           *	Delay function pointer: delay_msec
+    153           *	I2C address: dev_addr
+    154           *	Chip id of the sensor: chip_id
+    155           *---------------------------------------------------------------------------*/
+    156          struct bma2x2_t bma2x2;
+    157          /*----------------------------------------------------------------------------*
+    158          *  V_BMA2x2RESOLUTION_u8R used for selecting the accelerometer resolution
+    159           *	12 bit
+    160           *	14 bit
+    161           *	10 bit
+    162          *----------------------------------------------------------------------------*/
+    163          extern u8 V_BMA2x2RESOLUTION_u8R;
+    164          /* This function is an example for reading sensor data
+    165           *	\param: None
+    166           *	\return: communication result
+    167           */
+    168          s32 bma2x2_data_readout_template(void)
+    169          {
+    170          	/*Local variables for reading accel x, y and z data*/
+    171          	s16	accel_x_s16, accel_y_s16, accel_z_s16 = BMA2x2_INIT_VALUE;
+    172          
+    173          	/* bma2x2acc_data structure used to read accel xyz data*/
+    174          	struct bma2x2_accel_data sample_xyz;
+    175          	/* bma2x2acc_data_temp structure used to read
+    176          		accel xyz and temperature data*/
+    177          	struct bma2x2_accel_data_temp sample_xyzt;
+    178          	/* Local variable used to assign the bandwidth value*/
+    179          	u8 bw_value_u8 = BMA2x2_INIT_VALUE;
+    180          	/* Local variable used to set the bandwidth value*/
+    181          	u8 banwid = BMA2x2_INIT_VALUE;
+    182          	/* status of communication*/
+    183          	s32 com_rslt = ERROR;
+    184          
+    185          
+    186          /*********************** START INITIALIZATION ************************
+    187            *	Based on the user need configure I2C or SPI interface.
+    188            *	It is example code to explain how to use the bma2x2 API*/
+    189          	#ifdef BMA2x2_API
+    190          	I2C_routine();
+    191          	/*SPI_routine(); */
+    192          	#endif
+    193           /*--------------------------------------------------------------------------*
+    194           *  This function used to assign the value/reference of
+    195           *	the following parameters
+    196           *	I2C address
+    197           *	Bus Write
+    198           *	Bus read
+    199           *	Chip id
+    200           *-------------------------------------------------------------------------*/
+    201          	com_rslt = bma2x2_init(&bma2x2);
+    202          
+    203          /*	For initialization it is required to set the mode of
+    204           *	the sensor as "NORMAL"
+    205           *	NORMAL mode is set from the register 0x11 and 0x12
+    206           *	0x11 -> bit 5,6,7 -> set value as 0
+    207           *	0x12 -> bit 5,6 -> set value as 0
+    208           *	data acquisition/read/write is possible in this mode
+    209           *	by using the below API able to set the power mode as NORMAL
+    210           *	For the Normal/standby/Low power 2 mode Idle time
+    211          		of at least 2us(micro seconds)
+    212           *	required for read/write operations*/
+    213          	/* Set the power mode as NORMAL*/
+    214          	com_rslt += bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
+    215          /*	Note:
+    216          	* For the Suspend/Low power1 mode Idle time of
+    217          		at least 450us(micro seconds)
+    218          	* required for read/write operations*/
+    219          
+    220          /************************* END INITIALIZATION *************************/
+    221          
+    222          /*------------------------------------------------------------------------*
+    223          ************************* START GET and SET FUNCTIONS DATA ****************
+    224          *---------------------------------------------------------------------------*/
+    225          	/* This API used to Write the bandwidth of the sensor input
+    226          	value have to be given
+    227          	bandwidth is set from the register 0x10 bits from 1 to 4*/
+    228          	bw_value_u8 = 0x08;/* set bandwidth of 7.81Hz*/
+    229          	com_rslt += bma2x2_set_bw(bw_value_u8);
+    230          
+    231          	/* This API used to read back the written value of bandwidth*/
+    232          	com_rslt += bma2x2_get_bw(&banwid);
+    233          /*-----------------------------------------------------------------*
+    234          ************************* END GET and SET FUNCTIONS ****************
+    235          *-------------------------------------------------------------------*/
+    236          /*------------------------------------------------------------------*
+    237          ************************* START READ SENSOR DATA(X,Y and Z axis) ********
+    238          *---------------------------------------------------------------------*/
+    239          	/* Read the accel X data*/
+    240          	com_rslt += bma2x2_read_accel_x(&accel_x_s16);
+    241          	/* Read the accel Y data*/
+    242          	com_rslt += bma2x2_read_accel_y(&accel_y_s16);
+    243          	/* Read the accel Z data*/
+    244          	com_rslt += bma2x2_read_accel_z(&accel_z_s16);
+    245          
+    246          	/* accessing the bma2x2acc_data parameter by using sample_xyz*/
+    247          	/* Read the accel XYZ data*/
+    248          	com_rslt += bma2x2_read_accel_xyz(&sample_xyz);
+    249          
+    250          	/* accessing the bma2x2acc_data_temp parameter by using sample_xyzt*/
+    251          	/* Read the accel XYZT data*/
+    252          	com_rslt += bma2x2_read_accel_xyzt(&sample_xyzt);
+    253          
+    254          /*--------------------------------------------------------------------*
+    255          ************************* END READ SENSOR DATA(X,Y and Z axis) ************
+    256          *-------------------------------------------------------------------------*/
+    257          /*-----------------------------------------------------------------------*
+    258          ************************* START DE-INITIALIZATION ***********************
+    259          *-------------------------------------------------------------------------*/
+    260          /*	For de-initialization it is required to set the mode of
+    261           *	the sensor as "DEEP SUSPEND"
+    262           *	DEEP SUSPEND mode is set from the register 0x11
+    263           *	0x11 -> bit 5 -> set value as 1
+    264           *	the device reaches the lowest power consumption only
+    265           *	interface selection is kept alive
+    266           *	No data acquisition is performed
+    267           *	by using the below API able to set the power mode as DEEPSUSPEND*/
+    268           /* Set the power mode as DEEPSUSPEND*/
+    269          	com_rslt += bma2x2_set_power_mode(BMA2x2_MODE_DEEP_SUSPEND);
+    270          /*---------------------------------------------------------------------*
+    271          ************************* END DE-INITIALIZATION **********************
+    272          *---------------------------------------------------------------------*/
+    273          return com_rslt;
+    274          }
+    275          
+    276          #ifdef BMA2x2_API
+    277          /*--------------------------------------------------------------------------*
+    278          *	The following function is used to map the I2C bus read, write, delay and
+    279          *	device address with global structure bma2x2_t
+    280          *-------------------------------------------------------------------------*/
+    281          s8 I2C_routine(void)
+    282          {
+    283          /*--------------------------------------------------------------------------*
+    284           *  By using bma2x2 the following structure parameter can be accessed
+    285           *	Bus write function pointer: BMA2x2_WR_FUNC_PTR
+    286           *	Bus read function pointer: BMA2x2_RD_FUNC_PTR
+    287           *	Delay function pointer: delay_msec
+    288           *	I2C address: dev_addr
+    289           *--------------------------------------------------------------------------*/
+    290          	bma2x2.bus_write = BMA2x2_I2C_bus_write;
+    291          	bma2x2.bus_read = BMA2x2_I2C_bus_read;
+    292          	bma2x2.delay_msec = BMA2x2_delay_msek;
+    293          	bma2x2.dev_addr = BMA2x2_I2C_ADDR1;
+    294          
+    295          	return BMA2x2_INIT_VALUE;
+    296          }
+    297          
+    298          /*---------------------------------------------------------------------------*
+    299           * The following function is used to map the SPI bus read, write and delay
+    300           * with global structure bma2x2_t
+    301           *--------------------------------------------------------------------------*/
+    302          s8 SPI_routine(void)
+    303          {
+    304          /*--------------------------------------------------------------------------*
+    305           *  By using bma2x2 the following structure parameter can be accessed
+    306           *	Bus write function pointer: BMA2x2_WR_FUNC_PTR
+    307           *	Bus read function pointer: BMA2x2_RD_FUNC_PTR
+    308           *	Delay function pointer: delay_msec
+    309           *--------------------------------------------------------------------------*/
+    310          
+    311          	bma2x2.bus_write = BMA2x2_SPI_bus_write;
+    312          	bma2x2.bus_read = BMA2x2_SPI_bus_read;
+    313          	bma2x2.delay_msec = BMA2x2_delay_msek;
+    314          
+    315          	return BMA2x2_INIT_VALUE;
+    316          }
+    317          
+    318          /************** I2C/SPI buffer length ******/
+    319          #define	I2C_BUFFER_LEN 8
+    320          #define SPI_BUFFER_LEN 5
+    321          #define BMA2x2_BUS_READ_WRITE_ARRAY_INDEX	1
+    322          #define BMA2x2_SPI_BUS_WRITE_CONTROL_BYTE	0x7F
+    323          #define BMA2x2_SPI_BUS_READ_CONTROL_BYTE	0x80
+    324          
+    325          /*-------------------------------------------------------------------*
+    326          *	This is a sample code for read and write the data by using I2C/SPI
+    327          *	Use either I2C or SPI based on your need
+    328          *
+    329          *-----------------------------------------------------------------------*/
+    330          /*	For configuring the I2C it is required to switch ON
+    331           *	SDI, SDO and CLk and also select the device address
+    332           * The following definition of I2C address is used for the following sensors
+    333           * BMA255
+    334           * BMA253
+    335           * BMA355
+    336           * BMA280
+    337           * BMA282
+    338           * BMA223
+    339           * BMA254
+    340           * BMA284
+    341           * BMA250E
+    342           * BMA222E
+    343          
+    344           #define BMA2x2_I2C_ADDR1         0x18
+    345           #define BMA2x2_I2C_ADDR2         0x19
+    346          
+    347           * The following definition of I2C address is used for the following sensors
+    348           * BMC150
+    349           * BMC056
+    350           * BMC156
+    351          
+    352           #define BMA2x2_I2C_ADDR3        0x10
+    353           #define BMA2x2_I2C_ADDR4        0x11
+    354           *************************************************************************/
+    355           /*	\Brief: The function is used as I2C bus write
+    356           *	\Return : Status of the I2C write
+    357           *	\param dev_addr : The device address of the sensor
+    358           *	\param reg_addr : Address of the first register,
+    359           *              will data is going to be written
+    360           *	\param reg_data : It is a value hold in the array,
+    361           *		will be used for write the value into the register
+    362           *	\param cnt : The no of byte of data to be write
+    363           */
+    364          s8 BMA2x2_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
+    365          {
+    366          	s32 iError = BMA2x2_INIT_VALUE;
+    367          	u8 array[I2C_BUFFER_LEN];
+    368          	u8 stringpos = BMA2x2_INIT_VALUE;
+    369          
+    370          	array[BMA2x2_INIT_VALUE] = reg_addr;
+    371          	for (stringpos = BMA2x2_INIT_VALUE; stringpos < cnt; stringpos++) {
+    372          		array[stringpos + BMA2x2_BUS_READ_WRITE_ARRAY_INDEX] =
+    373          		*(reg_data + stringpos);
+    374          	}
+    375          	/*
+    376          	* Please take the below function as your reference for
+    377          	* write the data using I2C communication
+    378          	* "IERROR = I2C_WRITE_STRING(DEV_ADDR, ARRAY, CNT+1)"
+    379          	* add your I2C write function here
+    380          	* iError is an return value of I2C read function
+    381          	* Please select your valid return value
+    382          	* In the driver SUCCESS defined as 0
+    383          	* and FAILURE defined as -1
+    384          	* Note :
+    385          	* This is a full duplex operation,
+    386          	* The first read data is discarded, for that extra write operation
+    387          	* have to be initiated. For that cnt+1 operation
+    388          	* done in the I2C write string function
+    389          	* For more information please refer data sheet SPI communication:
+    390          	*/
+    391          	iError=I2C_Send_STRING(dev_addr,array, cnt+1);
+    392          	return (s8)iError;
+    393          }
+    394          
+    395           /*   \Brief: The function is used as I2C bus read
+    396           *    \Return : Status of the I2C read
+    397           *    \param dev_addr : The device address of the sensor
+    398           *    \param reg_addr : Address of the first register,
+    399           *            will data is going to be read
+    400           *    \param reg_data : This data read from the sensor,
+    401           *            which is hold in an array
+    402           *    \param cnt : The no of byte of data to be read
+    403           */
+    404          s8 BMA2x2_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
+    405          {
+    406          	s32 iError = BMA2x2_INIT_VALUE;
+    407          	u8 array[I2C_BUFFER_LEN] = {BMA2x2_INIT_VALUE};
+    408          	u8 stringpos = BMA2x2_INIT_VALUE;
+    409          
+    410          	array[BMA2x2_INIT_VALUE] = reg_addr;
+    411          	/* Please take the below function as your reference
+    412          	 * for read the data using I2C communication
+    413          	 * add your I2C rad function here.
+    414          	 * "IERROR = I2C_WRITE_READ_STRING(DEV_ADDR, ARRAY, ARRAY, 1, CNT)"
+    415          	 * iError is an return value of SPI write function
+    416          	 * Please select your valid return value
+    417               * In the driver SUCCESS defined as 0
+    418               * and FAILURE defined as -1
+    419          	 */
+    420          	 iError=I2C_WRITE_READ_STRING(dev_addr,array,cnt);
+    421          	for (stringpos = BMA2x2_INIT_VALUE; stringpos < cnt; stringpos++)
+    422          		*(reg_data + stringpos) = array[stringpos];
+    423          	
+    424          	return (s8)iError;
+    425          }
+    426          
+    427          /*	\Brief: The function is used as SPI bus read
+    428           *	\Return : Status of the SPI read
+    429           *	\param dev_addr : The device address of the sensor
+    430           *	\param reg_addr : Address of the first register,
+    431           *          will data is going to be read
+    432           *	\param reg_data : This data read from the sensor,
+    433           *          which is hold in an array
+    434           *	\param cnt : The no of byte of data to be read */
+    435          s8 BMA2x2_SPI_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
+    436          {
+    437          	s32 iError = BMA2x2_INIT_VALUE;
+    438          	u8 array[SPI_BUFFER_LEN] = {0xFF};
+    439          	u8 stringpos;
+    440          	/*	For the SPI mode only 7 bits of register addresses are used.
+    441          	The MSB of register address is declared the bit what functionality it is
+    442          	read/write (read as 1/write as 0)*/
+    443          	array[BMA2x2_INIT_VALUE] = reg_addr|BMA2x2_SPI_BUS_READ_CONTROL_BYTE;
+    444          	/*read routine is initiated register address is mask with 0x80*/
+    445          	/*
+    446          	* Please take the below function as your reference for
+    447          	* read the data using SPI communication
+    448          	* " IERROR = SPI_READ_WRITE_STRING(ARRAY, ARRAY, CNT+1)"
+    449          	* add your SPI read function here
+    450          	* iError is an return value of SPI read function
+    451          	* Please select your valid return value
+    452          	* In the driver SUCCESS defined as 0
+    453          	* and FAILURE defined as -1
+    454          	* Note :
+    455          	* This is a full duplex operation,
+    456          	* The first read data is discarded, for that extra write operation
+    457          	* have to be initiated. For that cnt+1 operation done in the SPI read
+    458          	* and write string function
+    459          	* For more information please refer data sheet SPI communication:
+    460          	*/
+    461          	for (stringpos = BMA2x2_INIT_VALUE; stringpos < cnt; stringpos++) {
+    462          		*(reg_data + stringpos) = array[stringpos +
+    463          		BMA2x2_BUS_READ_WRITE_ARRAY_INDEX];
+    464          	}
+    465          	return (s8)iError;
+    466          }
+    467          
+    468          /*	\Brief: The function is used as SPI bus write
+    469           *	\Return : Status of the SPI write
+    470           *	\param dev_addr : The device address of the sensor
+    471           *	\param reg_addr : Address of the first register,
+    472          *               will data is going to be written
+    473           *	\param reg_data : It is a value hold in the array,
+    474           *		will be used for write the value into the register
+    475           *	\param cnt : The no of byte of data to be write
+    476           */
+    477          s8 BMA2x2_SPI_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
+    478          {
+    479          	s32 iError = BMA2x2_INIT_VALUE;
+    480                  u8 array[SPI_BUFFER_LEN * 2];
+    481          	u8 stringpos = BMA2x2_INIT_VALUE;
+    482          
+    483          	for (stringpos = BMA2x2_INIT_VALUE; stringpos < cnt; stringpos++) {
+    484          		/* the operation of (reg_addr++)&0x7F done:
+    485          		because it ensure the
+    486          		0 and 1 of the given value
+    487          		It is done only for 8bit operation*/
+    488          		array[stringpos * 2] = (reg_addr++) &
+    489          		BMA2x2_SPI_BUS_WRITE_CONTROL_BYTE;
+    490          		array[stringpos * 2 + BMA2x2_BUS_READ_WRITE_ARRAY_INDEX] =
+    491          		*(reg_data + stringpos);
+    492          	}
+    493          	/* Please take the below function as your reference
+    494          	 * for write the data using SPI communication
+    495          	 * add your SPI write function here.
+    496          	 * "IERROR = SPI_WRITE_STRING(ARRAY, CNT*2)"
+    497          	 * iError is an return value of SPI write function
+    498          	 * Please select your valid return value
+    499          	 * In the driver SUCCESS defined as 0
+    500               * and FAILURE defined as -1
+    501          	 */
+    502          	return (s8)iError;
+    503          }
+    504          
+    505          /*	Brief : The delay routine
+    506           *	\param : delay in ms
+    507          */
+    508          void BMA2x2_delay_msek(u32 msek)
+    509          {
+    510          	/*Here you can write your own delay routine*/
+    511                 delay_ms(msek);
+    512          }
+    513          #endif
+    514          
+    515          void	BMA253_Init(void)
+    516          {
+    517          	/* status of communication*/
+    518          	s32 com_rslt = ERROR;
+    519          /*********************** START INITIALIZATION ************************
+    520            *	Based on the user need configure I2C or SPI interface.
+    521            *	It is example code to explain how to use the bma2x2 API*/
+    522          	#ifdef BMA2x2_API
+    523          	I2C_routine();
+    524          	#endif
+    525           /*--------------------------------------------------------------------------*
+    526           *  This function used to assign the value/reference of
+    527           *	the following parameters
+    528           *	I2C address
+    529           *	Bus Write
+    530           *	Bus read
+    531           *	Chip id
+    532           *-------------------------------------------------------------------------*/
+    533          	com_rslt = bma2x2_init(&bma2x2);
+    534          
+    535          /*	For initialization it is required to set the mode of
+    536           *	the sensor as "NORMAL"
+    537           *	NORMAL mode is set from the register 0x11 and 0x12
+    538           *	0x11 -> bit 5,6,7 -> set value as 0
+    539           *	0x12 -> bit 5,6 -> set value as 0
+    540           *	data acquisition/read/write is possible in this mode
+    541           *	by using the below API able to set the power mode as NORMAL
+    542           *	For the Normal/standby/Low power 2 mode Idle time
+    543          		of at least 2us(micro seconds)
+    544           *	required for read/write operations*/
+    545          	/* Set the power mode as NORMAL*/
+    546          	com_rslt += bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
+    547          /*	Note:
+    548          	* For the Suspend/Low power1 mode Idle time of
+    549          		at least 450us(micro seconds)
+    550          	* required for read/write operations*/
+    551          
+    552          /************************* END INITIALIZATION *************************/
+    553          }
+    554          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       8  ?_0
+       5  ?_1
+      54  BMA253_Init
+     119  BMA2x2_I2C_bus_read
+     107  BMA2x2_I2C_bus_write
+      95  BMA2x2_SPI_bus_read
+     106  BMA2x2_SPI_bus_write
+      20  BMA2x2_delay_msek
+      63  I2C_routine
+      59  SPI_routine
+      18  bma2x2
+     304  bma2x2_data_readout_template
+
+ 
+ 927 bytes in section .far_func.text
+  18 bytes in section .near.bss
+  13 bytes in section .near.rodata
+ 
+ 927 bytes of CODE  memory
+  13 bytes of CONST memory
+  18 bytes of DATA  memory
+
+Errors: none
+Warnings: 2

@@ -1,0 +1,46 @@
+8
+
+dir
+40887
+svn://192.168.0.218/communications/InternetOfThings/insertSoft/KN2000(01)
+svn://192.168.0.218
+
+
+
+2019-04-11T05:14:24.011790Z
+40887
+wanghw
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+4a8221f9-4a57-2a44-9d5a-e93d4dd2efb3
+
+KAC(3A)_MainDir
+dir
+
+60K_lnkstm8l052r8.icf
+file
+
+
+
+
+2019-04-11T01:33:06.868243Z
+579cfc5a0a4f17eccdba2323515aae43
+2019-04-09T23:56:33.053340Z
+40854
+wanghw
+
+KAC(3A)_libSystem
+dir
+

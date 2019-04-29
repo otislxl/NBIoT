@@ -1,0 +1,680 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:13
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\ModuleProtocol.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\ModuleProtocol.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\ModuleProtocol.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\ModuleProtocol.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\ModuleProtocol.c
+      1          #include "stm8l15x.h"
+      2          #include "stm8l15x_itc.h"
+      3          #include "sysdefs.h"
+      4          #include <stdio.h>
+      5          #include <stdlib.h>
+      6          #include "string.h"
+      7          #include "EventQueue.h"
+      8          #include "OverTimeQueue.h"
+      9          #include "Module.h"
+     10          #include "ModuleProtocol.h"
+     11          #include "stm8l15x_rtc.h"
+     12          #include "hwdgpio.h"
+     13          //#include "Pedometer.h"
+     14          const char version[16] = {"KN2000V1.00"};
+     15          
+     16          uint8 sendstsflag=1;						// 1为需要上报状态
+     17          
+     18          extern uint8 EventQueueLock;
+     19          
+     20          extern RTC_TimeTypeDef   RTC_TimeStr;
+     21          extern RTC_DateTypeDef   RTC_DateStr;
+     22          
+     23          uint16 LinkSeverOverTime = 1440;			//心跳周期
+     24          uint16 g_update_total_packnum,g_update_present_packnum;
+     25          uint16 ModuleResetTime = MOUDLE_WORKING_MAX_TIME;			//模块启动时间
+     26          uint16 NoNetDataTime = 2880;				//连续两个心跳没收到网络数据时间
+     27          uint8  cur_cmd=0xff;						//当前指令暂存
+     28          uint8  ReBackNetBag=FALSE;				//返回给模块的网络包,为TRUE只发送一遍
+     29          uint8 g_had_link_manager=FALSE;			//上电连接过卡尔管理平台标志
+     30          uint16 pagid=0,allpag=1;					//通信包号及总包数
+     31          uint16 NoLinkSeverCount;					//没有链接服务器时间计数,24小时内连接一次
+     32          uint8 macaddresarray[17][15]={0};
+     33          PEDOSTEPCNT_S Pedostepcnt;
+     34          /*3.5V--913;4.0V--1035; 4.5V--1159; 4.9V--1240; 5.3V--1306; 5.7V--1361; 6.1V--1408*/
+     35          const uint16 bat_percentage_range[]=
+     36          {
+     37          	1035,1100,1159,1200,1240,1276,1306,1331,1361,1408
+     38          };
+     39          
+     40          //定时器3初始化 20ms中断
+     41          void Timer3_Init(void)
+     42          {
+     43            /* Enable TIM3 clock */
+     44            CLK_PeripheralClockConfig(CLK_Peripheral_TIM3, ENABLE);
+     45          
+     46            /* Remap TIM3 ETR to LSE: TIM3 external trigger becomes controlled by LSE clock */
+     47            SYSCFG_REMAPPinConfig(REMAP_Pin_TIM3TRIGLSE, ENABLE);
+     48          
+     49            /* Enable LSE clock */
+     50            CLK_LSEConfig(CLK_LSE_ON);
+     51            /* Wait for LSERDY flag to be reset */
+     52            while (CLK_GetFlagStatus(CLK_FLAG_LSERDY) == RESET);
+     53          
+     54            /* TIM3 configuration:
+     55               - TIM3 ETR is mapped to LSE
+     56               - TIM3 counter is clocked by LSE div 4
+     57                so the TIM3 counter clock used is LSE / 4 = 32.768 / 4 = 8.192 KHz
+     58               TIM2Channel1 output frequency = TIM2CLK / (TIM2 Prescaler * (TIM2_PERIOD + 1))
+     59                                              = 8192 / (1 * 8) = 1024 Hz                */
+     60                                              
+     61            /* Time Base configuration */
+     62            TIM3_TimeBaseInit(TIM3_Prescaler_1, TIM3_CounterMode_Up, 163);
+     63            TIM3_ETRClockMode2Config(TIM3_ExtTRGPSC_DIV4, TIM3_ExtTRGPolarity_NonInverted, 0);
+     64          
+     65            TIM3_UpdateRequestConfig(TIM3_UpdateSource_Global);
+     66          
+     67            /* Clear TIM2 update flag */
+     68            TIM3_ClearFlag(TIM3_FLAG_Update);
+     69          
+     70            /* Enable update interrupt */
+     71            TIM3_ITConfig(TIM3_IT_Update, ENABLE);
+     72          
+     73            ITC_SetSoftwarePriority(TIM3_UPD_OVF_TRG_BRK_USART3_TX_IRQn,ITC_PriorityLevel_1);
+     74          
+     75            TIM3_Cmd(ENABLE);
+     76          }
+     77          
+     78          //获取版本号
+     79          void get_version(uint8 *buf)
+     80          {
+     81          	memset(buf,0,16);    
+     82          	memcpy(buf,version,strlen(version));    
+     83          }
+     84          //协议初始化
+     85          void Protocol_Init(void)
+     86          {
+     87          	g_had_link_manager=FALSE;
+     88          }
+     89          
+     90          //20ms中断程序
+     91          void Timer3ProgramHandle(void)
+     92          {  
+     93          	Uart1RevHandle();
+     94          
+     95          	if (AtDelayTime>0) 
+     96          		AtDelayTime--;
+     97          
+     98          	if (Moudleinfo.SendDataTime>0) 
+     99          		Moudleinfo.SendDataTime--;
+    100          
+    101          	if (EventQueueLock==0)   
+    102          		DecOverTime();
+    103          }
+    104          
+    105          /*更新门禁平台IP*/
+    106          void RemoteSetPlantform(uint8 *string)
+    107          {
+    108          	uint8 nb_ip[16]={0},nb_port[6]={0},flag=0;
+    109          
+    110          	memcpy(nb_ip,string,16);   string+=16;
+    111          	memcpy(nb_port,string,6);	string+=6;
+    112          	
+    113          	hw_eeprom_write_bytes(NV_NB_PLANTFORM_IP, nb_ip,15);
+    114          	hw_eeprom_write_bytes(NV_NB_PLANTFORM_PORT,nb_port,5);
+    115          	if(memcmp(Moudleinfo.NB_plantform_IP,nb_ip,strlen((char*)nb_ip)))
+    116          	{
+    117          		flag=1;
+    118           	}
+    119          	if(memcmp(Moudleinfo.NB_palntform_PORT,nb_port,strlen((char*)nb_port)))
+    120          	{
+    121          		flag=1;
+    122           	}
+    123          	if(flag)
+    124          	{
+    125          		GetNBplantformIPandPORT();
+    126          	}
+    127          }
+    128          
+    129          //时间校准
+    130          void check_device_time(uint8 *string)
+    131          {  
+    132          	uint16 hhmmss0,hhmmss1,SubValue;
+    133          	uint8 i,CurTimeBuf[8],*ptr = string;
+    134          
+    135          	for(i=0;i<6;i++)
+    136          		CurTimeBuf[i] = BcdToBin(*ptr++);
+    137          
+    138          	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStr);
+    139          	RTC_GetDate(RTC_Format_BIN, &RTC_DateStr);
+    140          
+    141          	hhmmss0=CurTimeBuf[4]*60 + CurTimeBuf[5];
+    142          	hhmmss1=RTC_TimeStr.RTC_Minutes*60 + RTC_TimeStr.RTC_Seconds;
+    143          
+    144          	if (hhmmss1>hhmmss0) 
+    145          		SubValue=hhmmss1-hhmmss0;
+    146          	else 
+    147          		SubValue=hhmmss0-hhmmss1;
+    148          
+    149          	if (SubValue>5 
+    150          		|| RTC_DateStr.RTC_Year !=CurTimeBuf[0] 
+    151          		|| RTC_DateStr.RTC_Month !=CurTimeBuf[1] 
+    152          		|| RTC_DateStr.RTC_Date !=CurTimeBuf[2]
+    153          		|| RTC_TimeStr.RTC_Hours !=CurTimeBuf[3]
+    154          		)
+    155          	{
+    156          		set_date(CurTimeBuf);
+    157          		set_time(&CurTimeBuf[3]);
+    158          		get_rtc_time();
+    159          		net_link_cclk_flag = TRUE; 
+    160          	}
+    161          }
+    162          /**********************************************************************
+    163          *FUNCTION NAME	: 
+    164          *CREATE	DATA	: 
+    165          *CREATED BY		: 
+    166          *FUNCTION		: 对接收到的数据进行分析
+    167          *MODIFY	DATA	:
+    168          *INPUT			:string 有效数据;len数据长度
+    169          *OUTPUT			:
+    170          *RETURN			:处理数据的长度
+    171          ***********************************************************************/
+    172          uint16 ProtoDataAnalyze(uint8 *string,uint16 len)
+    173          {  
+    174          	uint32 SubValue;
+    175          	unsigned char cmd,check=0,*ptr = string,is_response = TRUE;;
+    176          	unsigned short i,lenth;
+    177          
+    178          	unsigned char g_imei_code[18];
+    179          
+    180          	if(	*ptr !=0xaa)
+    181          	{
+    182          		return 0;
+    183          	}
+    184          	
+    185          	ptr++;
+    186          	
+    187          	cmd= *ptr++;
+    188          	lenth = (*ptr++)<<8;
+    189          	lenth += *ptr++;
+    190          
+    191          	if((lenth+4)>len)
+    192          	{
+    193          		return 0;
+    194          	}
+    195          		
+    196          	pagid = (*ptr++)<<8;
+    197          	pagid += *ptr++;
+    198          	allpag = (*ptr++)<<8;
+    199          	allpag += *ptr++;
+    200          
+    201          	if(string[1]==0xff)
+    202          	{
+    203          	}
+    204          	 else if(pagid == allpag-1)
+    205           	{
+    206          		load_continuous_flag = FALSE;
+    207          		SetNoDataTimeCount(NO_NET_DATA_TIME);
+    208           	}
+    209          	 else
+    210           	{
+    211          		set_sleep_counter_max(0);
+    212          		SetNoDataTimeCount(NET_DATA_MAX_TIME);
+    213          		if(cmd == TRANSF_UPDATE_PACK)
+    214          			load_continuous_flag = TRUE;	
+    215           	}
+    216          	
+    217          	for(i=0;i<(lenth+4);i++)
+    218          	{
+    219          		check+=*(string+i);
+    220          	}
+    221          	if(check != string[lenth+4])
+    222            	{
+    223          		return 0;
+    224          	}
+    225          	
+    226          	BcdHexToString(&string[8],8,g_imei_code);
+    227          
+    228          	g_imei_code[15]=0;
+    229          
+    230          	if (memcmp(g_imei_code,Moudleinfo.IMEI,15))
+    231          	{
+    232          		return 0;
+    233          	}
+    234          	ptr+=8;
+    235          	//发送的指令收到回应，则重发次数置0
+    236          	if(cmd==cur_cmd || cmd==0xff)
+    237          	{
+    238          		if(load_continuous_flag == FALSE)
+    239          			ReSndCount = 0;
+    240          	}
+    241          	
+    242          	NoNetDataTime = LinkSeverOverTime*2+30;
+    243          	//判断是物联网平台应答
+    244          	if (string[1]==0xff)
+    245          	{
+    246          		if (string[16]==REPORT_STS) 
+    247          		{
+    248          			check_device_time(&string[18]);
+    249          		}
+    250          		return (lenth+5);
+    251          	}
+    252          
+    253          	switch(cmd)
+    254          	{
+    255          		case REPORT_STS:                        //状态回应
+    256          		{
+    257          			if(0==*ptr++)
+    258          			{
+    259          				/*SubValue = (*ptr)<<8;
+    260          				SubValue += *(ptr+1);
+    261          				if(SubValue)
+    262          					LinkSeverOverTime =SubValue;
+    263          				if(NoLinkSeverCount > LinkSeverOverTime)
+    264          					NoLinkSeverCount =LinkSeverOverTime;
+    265          				ptr+=3;
+    266          				if(Moudleinfo.ops_type != OPS_TELECOM)
+    267          					check_device_time(&(*ptr));
+    268          				if(g_had_link_manager == FALSE)
+    269          				{
+    270          					if(Moudleinfo.ops_type == OPS_TELECOM)
+    271          						g_had_link_manager = TRUE;
+    272          				}*/
+    273          				for(i=0;i<15;i++)
+    274          				{
+    275          					memcpy(&macaddresarray[0][i],ptr,17);
+    276          					ptr+=17;
+    277          				}
+    278          			}
+    279          	
+    280          		}break;
+    281          
+    282          	case TRANSF_UPDATE_PACK:
+    283          		{
+    284          			uint8 tmp,buf[16];
+    285          			uint16 check_sum,g_check_sum,pag_len;
+    286          			uint32 update_address,update_len=0;
+    287          			if(g_system_reset_time == 0)
+    288          			{
+    289          				is_response = FALSE;
+    290          				if(pagid == 0)
+    291          				{	
+    292          					tmp=0x00;
+    293          					hw_eeprom_write_bytes(NV_UPDATE_FLAG,&tmp,1);
+    294          					disableInterrupts();  
+    295          					hw_eeprom_write_bytes(NV_SOFT_VERSION,ptr,14);
+    296          					FLASH_Unlock(FLASH_MemType_Program);
+    297          					FLASH_SetProgrammingTime(FLASH_ProgramTime_TProg);
+    298          					for(i=0x00;i<FLASH_APP_PROGRAM_BLOCKS;i++)
+    299          					{
+    300          						FLASH_WaitForLastOperation(FLASH_MemType_Program);
+    301          						FLASH_EraseBlock((FLASH_BOOT_PROGRAM_BLOCKS+FLASH_APP_PROGRAM_BLOCKS+i),FLASH_MemType_Program);      // 1page=2block=256bytes    backup area start from c000 to efff
+    302          					}
+    303          					g_update_total_packnum = allpag;
+    304          					g_update_present_packnum = 1;
+    305          					enableInterrupts();
+    306          				}
+    307          				else if(pagid == g_update_present_packnum)
+    308          				{
+    309          					if(Moudleinfo.ops_type == OPS_TELECOM)
+    310          						pag_len = 480;
+    311          					else
+    312          						pag_len = 512;
+    313          					update_address = FLASH_BOOT_PROGRAM_BLOCKS+FLASH_APP_PROGRAM_BLOCKS+pag_len*(g_update_present_packnum-1);
+    314          					g_update_present_packnum ++;
+    315          					disableInterrupts();  
+    316          					FLASH_WaitForLastOperation(FLASH_MemType_Program);
+    317          					FLASH_ProgramBlock(update_address, FLASH_MemType_Program,FLASH_ProgramMode_Fast,ptr);
+    318          					enableInterrupts();
+    319          					if(pagid==(g_update_total_packnum-1))
+    320          					{
+    321          						hw_eeprom_read_bytes(NV_SOFT_LEN,buf,4);
+    322          						update_len = buf[2];
+    323          						update_len <<= 8;
+    324          						update_len += buf[3];
+    325          						hw_eeprom_read_bytes(NV_SOFT_CHECK,buf,2);
+    326          						g_check_sum = buf[0]<<8;
+    327          						g_check_sum += buf[1];
+    328          						check_sum = 0;
+    329          						for(i=0;i<update_len;i++)
+    330          						{
+    331          							tmp=FLASH_ReadByte(FLASH_BOOT_PROGRAM_BLOCKS+FLASH_APP_PROGRAM_BLOCKS+i);
+    332          							check_sum +=tmp;
+    333          						}
+    334          						if(check_sum == g_check_sum)
+    335          						{
+    336          							tmp=0x0a;
+    337          							hw_eeprom_write_bytes(NV_UPDATE_FLAG,&tmp,1);
+    338          							g_system_reset_time = 20;
+    339          						}
+    340          					}
+    341          				}
+    342          			}			 
+    343          		}break;
+    344          		
+    345          		case TERMINALHEARTBEAT:
+    346          		{
+    347          			RemoteSetPlantform(ptr);
+    348          			g_had_link_manager = TRUE;
+    349          		}break;
+    350          		
+    351          		case DOWN_CONFIG:
+    352          		{
+    353          			/*uint8 ssid[32+1]={0},pswd[32+1]={0};
+    354          
+    355          			for(i=0;*ptr!=',';i++,ptr++)
+    356          			{
+    357          				ssid[i]=*ptr;
+    358          				}
+    359          			ptr++;
+    360          			for(i=0;*ptr!=0x0d;i++,ptr++)
+    361          			{
+    362          				pswd[i]=*ptr;
+    363          			}*/
+    364          			uint8 locatemode =0xff;
+    365          			uint16 heartbeatmove=0,heartbeatstop=0;
+    366          
+    367          			locatemode=*ptr++;
+    368          
+    369          			heartbeatmove = (*ptr++)<<8;
+    370          			heartbeatmove += *ptr++;
+    371          			
+    372          			heartbeatstop = (*ptr++)<<8;
+    373          			heartbeatstop += *ptr++;
+    374          			
+    375          		}break;
+    376          
+    377          	default:break;
+    378          		
+    379          	}
+    380          	if(!is_response)
+    381          	{
+    382          		/* 平台下发指令处理*/
+    383          		ProtoDataOrganized(cmd,NULL,0); 
+    384          	}
+    385          	else
+    386          		Moudleinfo.SendDataTime=0;
+    387          
+    388          	ModuleResetTime = MOUDLE_WORKING_MAX_TIME;
+    389                  return (lenth+5);
+    390          }
+    391          
+    392          
+    393          //判断是否需连接网络发送数据TRUE为需要连接
+    394          uint8 GetNetNeedLinkState(void)
+    395          {
+    396          	if (NoLinkSeverCount == 0              
+    397          		|| sendstsflag==1
+    398          		)
+    399          	{
+    400          		return TRUE;
+    401          	}
+    402          	else
+    403          	{
+    404          		return FALSE;
+    405          	}
+    406          }
+    407          
+    408          //连接网络后发送后续网络数据函数
+    409          void NetActiveHandle(void)
+    410          {
+    411          	if(load_continuous_flag)
+    412          		return;
+    413          	//上报报警状态
+    414          	if(sendstsflag)
+    415          	{
+    416          		//生成状态上报的数据
+    417          		if ((power_level_state<=POWER_REMIND) && (low_power_report_flag==FALSE))  
+    418          		{
+    419          			ProtoDataOrganized(REPORT_STS,NULL,1); 
+    420          			low_power_report_flag = TRUE;
+    421          		}
+    422          		else 
+    423          		{
+    424          			ProtoDataOrganized(REPORT_STS,NULL,0); 
+    425          		}
+    426          		sendstsflag=0;
+    427          		NoLinkSeverCount = LinkSeverOverTime;
+    428          	}
+    429          	else if(g_had_link_manager == FALSE)
+    430          	{
+    431          		if(Moudleinfo.ops_type==OPS_TELECOM)
+    432          			g_had_link_manager=TRUE;
+    433          		else
+    434          			ProtoDataOrganized(TERMINALHEARTBEAT,NULL,0); 
+    435          	}
+    436          }
+    437          
+    438          /**********************************************************************
+    439          *FUNCTION NAME	: ProtoDataOrganized
+    440          *FUNCTION		: 组织发送网络数据函数
+    441          *MODIFY	DATA	:
+    442          *INPUT			: cmd 发送指令 card卡号地址  flag 0状态上报1报警上报
+    443          *OUTPUT			: none
+    444          *RETURN			: 数据长度
+    445          ***********************************************************************/
+    446          unsigned short ProtoDataOrganized(unsigned char cmd,uint8 *card,uint8 flag)
+    447          {
+    448          	unsigned short i,ptr=0;
+    449          	unsigned char check=0,record_num;
+    450          	unsigned char g_proto_data[CREATE_PRO_BUF_SIZE];
+    451          	
+    452          	ReBackNetBag=FALSE;
+    453          	cur_cmd = cmd;
+    454          	g_proto_data[ptr++] = 0xaa;
+    455          	
+    456          	g_proto_data[ptr++] = cmd;
+    457          	
+    458          	ptr+=2;     //lenth
+    459          	
+    460           	g_proto_data[ptr++]=(pagid>>8)&0xff;
+    461          	g_proto_data[ptr++]=pagid&0xff;
+    462          	g_proto_data[ptr++]=(allpag>>8)&0xff;
+    463          	g_proto_data[ptr++]=allpag&0xff;
+    464           	for (i=0;i<8;i++)
+    465          		 g_proto_data[ptr++]=StrToBcd(&Moudleinfo.IMEI[2*i]);
+    466          	switch(cmd)
+    467          	{
+    468          	case REPORT_STS:	
+    469          		{
+    470          		get_version(&g_proto_data[ptr]);
+    471          		ptr += 32;
+    472          		//经16
+    473          			
+    474          		//纬16
+    475          
+    476          		//海拔16
+    477          		
+    478          		//MAC1及RSSI1   17+1
+    479          
+    480          		//MAC2及RSSI2
+    481          		
+    482          		//MAC3及RSSI3
+    483          		
+    484          		//时间
+    485          		sprintf(&g_proto_data[ptr],"20%02d%02d%02d%02d%02d%02d",
+    486          		RTC_DateStr.RTC_Year,RTC_DateStr.RTC_Month,RTC_DateStr.RTC_Date,RTC_TimeStr.RTC_Hours,RTC_TimeStr.RTC_Minutes,RTC_TimeStr.RTC_Seconds);
+    487          		ptr += 14;
+    488          		//消息上报类型
+    489          		if(power_level_state<=POWER_REMIND)
+    490          			g_proto_data[ptr++]= 1;    				//低电量
+    491          		else
+    492          			g_proto_data[ptr++]= 0;
+    493          		//RSSI
+    494          		g_proto_data[ptr++]= Moudleinfo.Csq;        //BCD
+    495          		//RSRP
+    496          		g_proto_data[ptr++]= (Moudleinfo.rsrp>>8)&0xff;
+    497          		g_proto_data[ptr++]= Moudleinfo.rsrp&0xff;
+    498          		//ECL
+    499          		
+    500          		//SINR
+    501          		g_proto_data[ptr++]= (Moudleinfo.sinr>>8)&0xff;
+    502          		g_proto_data[ptr++]= Moudleinfo.sinr&0xff;
+    503          		//电池电量百分比
+    504          		record_num = 0;
+    505          		for(i=0;i<10;i++)
+    506          		{
+    507          			if(Moudleinfo.batt>bat_percentage_range[i])
+    508          				record_num+=10;
+    509          			else
+    510          				break;
+    511          		}
+    512          		g_proto_data[ptr++]= record_num;
+    513          		//计步开始时间13	
+    514          		memcpy(&g_proto_data[ptr],Pedostepcnt.startcnttime,13);
+    515          		ptr+=13;
+    516          		//计步结束时间13
+    517          		memcpy(&g_proto_data[ptr],Pedostepcnt.endcnttime,13);
+    518          		ptr+=13;
+    519          		//步数6
+    520          		g_proto_data[ptr++]= 0x00;
+    521          		g_proto_data[ptr++]= 0x00;
+    522          		memcpy(&g_proto_data[ptr],(uint8*)&Pedostepcnt.stepcount,4);
+    523          		ptr+=4;
+    524          		
+    525          		//充电状态
+    526          		g_proto_data[ptr++]= 0;
+    527          
+    528          		//Cell ID 16
+    529          		
+    530          		//PCI
+    531          		g_proto_data[ptr++]= (Moudleinfo.pci>>8)&0xff;
+    532          		g_proto_data[ptr++]= Moudleinfo.pci&0xff;
+    533          		
+    534          		}break;
+    535          	
+    536          	
+    537          	case TRANSF_UPDATE_PACK:
+    538          		{
+    539          		 	g_proto_data[ptr++]= 0x00;   // 错误码
+    540          		
+    541          		}break;
+    542          
+    543          	case TERMINALHEARTBEAT:
+    544          		{			
+    545          			memcpy(&g_proto_data[ptr],Moudleinfo.NB_plantform_IP,16);
+    546          			ptr+=16;
+    547          			memcpy(&g_proto_data[ptr],Moudleinfo.NB_palntform_PORT,6);
+    548          			ptr+=6;
+    549          			memcpy(&g_proto_data[ptr],Moudleinfo.NB_plantform_IP,16);
+    550          			ptr+=16;
+    551          			memcpy(&g_proto_data[ptr],Moudleinfo.NB_palntform_PORT,6);
+    552          			ptr+=6;
+    553          
+    554          		}break;
+    555          
+    556          	case DOWN_CONFIG:
+    557          		{
+    558          		 	g_proto_data[ptr++]= 0x00;   // 错误码
+    559          		
+    560          		}break;
+    561          
+    562          		default:break;
+    563          	}
+    564          	
+    565          	g_proto_data[2] = ((ptr-4)>>8)&0xff;
+    566          	g_proto_data[3] =  (ptr-4)&0xff;
+    567          	
+    568          	for(i=0;i<ptr;i++)
+    569          	{
+    570          		check+=g_proto_data[i];
+    571          	}
+    572          	g_proto_data[ptr++]=check;
+    573          	
+    574          	SendProToNBmodule(g_proto_data,ptr,0);
+    575          	return ptr;
+    576          }
+    577          
+    578          //模块通信异常处理
+    579          void ModuleResetHandle(void)
+    580          {
+    581          	// 1天没有收到网络数据则重连平台
+    582          	if(NoLinkSeverCount)
+    583          	{
+    584          		NoLinkSeverCount --;
+    585          		if(NoLinkSeverCount == 0)
+    586          		{
+    587          			wake_up_from_sleep();
+    588          			sendstsflag=1;
+    589          			delay_ms(500);
+    590          			Get_ADC_Value(0);
+    591          		}
+    592          	}
+    593          	// 2天没有收到网络数据则重启模块
+    594          	if(NoNetDataTime)
+    595          	{
+    596          		NoNetDataTime--;
+    597          		if(NoNetDataTime == 0)
+    598          		{
+    599          			wake_up_from_sleep();
+    600          			//复位模块
+    601          			HW_ModuleReset();
+    602          		}
+    603          	}
+    604          }
+    605          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      16  ?_0
+       6  ?_1
+      27  ?_2
+      19  GetNetNeedLinkState
+       2  LinkSeverOverTime
+      67  ModuleResetHandle
+       2  ModuleResetTime
+      98  NetActiveHandle
+       2  NoLinkSeverCount
+       2  NoNetDataTime
+      31  Pedostepcnt
+     988  ProtoDataAnalyze
+     894  ProtoDataOrganized
+       5  Protocol_Init
+       1  ReBackNetBag
+     196  RemoteSetPlantform
+      44  Timer3ProgramHandle
+      93  Timer3_Init
+       2  allpag
+      20  bat_percentage_range
+     251  check_device_time
+       1  cur_cmd
+       1  g_had_link_manager
+       2  g_update_present_packnum
+       2  g_update_total_packnum
+      42  get_version
+     255  macaddresarray
+       2  pagid
+       1  sendstsflag
+      16  version
+
+ 
+ 2 697 bytes in section .far_func.text
+   296 bytes in section .near.bss
+    10 bytes in section .near.data
+    85 bytes in section .near.rodata
+ 
+ 2 697 bytes of CODE  memory
+    85 bytes of CONST memory
+   306 bytes of DATA  memory
+
+Errors: none
+Warnings: 3

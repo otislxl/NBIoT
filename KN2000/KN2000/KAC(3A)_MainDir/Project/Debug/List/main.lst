@@ -1,0 +1,870 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  16:17:41
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\main.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\main.c" -e --char_is_signed
+#        -On --no_cse --no_unroll --no_inline --no_code_motion --no_tbaa
+#        --no_cross_call --debug --code_model medium --data_model medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\main.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\main.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\main.c
+      1          /**
+      2            *****************************************************************************
+      3            * @file    Project/STM8L15x_StdPeriph_Template/main.c
+      4            * @author  MCD Application Team
+      5            * @version V1.6.1
+      6            * @date    30-September-2014
+      7            * @brief   Main program body
+      8            ******************************************************************************
+      9            * @attention
+     10            *
+     11            * <h2><center>&copy; COPYRIGHT 2014 STMicroelectronics</center></h2>
+     12            *
+     13            * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
+     14            * You may not use this file except in compliance with the License.
+     15            * You may obtain a copy of the License at:
+     16            *
+     17            *        http://www.st.com/software_license_agreement_liberty_v2
+     18            *
+     19            * Unless required by applicable law or agreed to in writing, software 
+     20            * distributed under the License is distributed on an "AS IS" BASIS, 
+     21            * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     22            * See the License for the specific language governing permissions and
+     23            * limitations under the License.
+     24            *
+     25            ******************************************************************************
+     26            */
+     27          
+     28          /* Includes ------------------------------------------------------------------*/
+     29          #include "main.h"
+     30          #include <stdio.h>
+     31          #include <stdlib.h>
+     32          #include "string.h"
+     33          #include "stm8l15x_rtc.h"
+     34          #include "EventQueue.h"
+     35          #include "OverTimeQueue.h"
+     36          #include "bma2x2.h"
+     37          #include "Module_wifi.h"
+     38          #include "i2c.h"
+     39          uint16 SendAtTimeCount=0;
+     40          uint8  Sleep_flag=1;
+     41          
+     42          #define TIM2_PERIOD_1   7
+     43          #define TIM2_PERIOD_2   15
+     44          #define TIM2_PERIOD_4   31
+     45          #define TIM2_PERIOD_8   63
+     46          #define TIM2_PERIOD_10 	81  //79
+     47          
+     48          uint8 rtc_interrupt_flag = FALSE;
+     49          uint8 lowpowerwait_flag = WORK_MODE;
+     50          uint8 sleep_counter = 0;			//睡眠等待时间
+     51          uint8 had_get_adc_flag = FALSE;	//上电第一次检测ADC
+     52          uint8 net_link_cclk_flag = FALSE;	//获取时间标志
+     53          uint8 load_continuous_flag = FALSE;	//多包下载数据标志
+     54          
+     55          uint8 g_system_reset_time = 0; 		//重启时间	
+     56          	
+     57          uint16 ms500Count=0;
+     58          
+     59          RTC_TimeTypeDef   RTC_TimeStr;
+     60          RTC_DateTypeDef   RTC_DateStr;
+     61          uint8 last_date=0;						//最后更新日期
+     62          
+     63          CONST uint8_t RTC_TampFilter[4] = {RTC_TamperFilter_1Sample, RTC_TamperFilter_2Sample,
+     64                                               RTC_TamperFilter_4Sample, RTC_TamperFilter_8Sample};
+     65          __IO uint8_t TampFilterIndex = 1;
+     66          
+     67          uint16 ADCdata = 0,ADC_VALUE_CALCULATE = 0;
+     68          uint8 adc_cnt = 0;
+     69          uint8 power_level_state = POWER_FULL;		//电池电量状态
+     70          uint8 low_power_report_flag = FALSE;		//低电已上报标志
+     71          char IniFlagFlag=0;						//恢复出厂等待按#确认的状态
+     72          
+     73          extern void Timer3_Init(void);
+     74          
+     75          uint8 ModuleSts;
+     76          
+     77          /**
+     78            * @addtogroup TIMING_DELAY_Functions
+     79            */
+     80          
+     81          /**
+     82            * @brief  timing delay init:to generate 1 ms time base using TIM2 update interrupt
+     83            * @note   The external low speed clock (LSE) is used to ensure timing accuracy.
+     84            *         This function should be updated in case of use of other clock source.      
+     85            * @param  None
+     86            * @retval None
+     87            */
+     88          void Tim2Delay_Init(void)
+     89          {
+     90            /* Enable TIM2 clock */
+     91            CLK_PeripheralClockConfig(CLK_Peripheral_TIM2, ENABLE);
+     92          
+     93            /* Remap TIM2 ETR to LSE: TIM2 external trigger becomes controlled by LSE clock */
+     94            SYSCFG_REMAPPinConfig(REMAP_Pin_TIM2TRIGLSE, ENABLE);
+     95          
+     96            /* Enable LSE clock */
+     97            CLK_LSEConfig(CLK_LSE_ON);
+     98            /* Wait for LSERDY flag to be reset */
+     99            while (CLK_GetFlagStatus(CLK_FLAG_LSERDY) == RESET);
+    100          
+    101            /* TIM2 configuration:
+    102               - TIM2 ETR is mapped to LSE
+    103               - TIM2 counter is clocked by LSE div 4
+    104                so the TIM2 counter clock used is LSE / 4 = 32.768 / 4 = 8.192 KHz
+    105               TIM2 Channel1 output frequency = TIM2CLK / (TIM2 Prescaler * (TIM2_PERIOD + 1))
+    106                                              = 8192 / (1 * 8) = 1024 Hz                */
+    107                                              
+    108            /* Time Base configuration */
+    109            TIM2_TimeBaseInit(TIM2_Prescaler_1, TIM2_CounterMode_Up, TIM2_PERIOD_10);
+    110            TIM2_ETRClockMode2Config(TIM2_ExtTRGPSC_DIV4, TIM2_ExtTRGPolarity_NonInverted, 0);
+    111          
+    112            TIM2_UpdateRequestConfig(TIM2_UpdateSource_Global);
+    113          
+    114            /* Clear TIM2 update flag */
+    115            TIM2_ClearFlag(TIM2_FLAG_Update);
+    116          
+    117            /* Enable update interrupt */
+    118            TIM2_ITConfig(TIM2_IT_Update, ENABLE);
+    119          
+    120            TIM2_Cmd(ENABLE);
+    121          }
+    122          	
+    123          void ADC_Config(void)
+    124          {
+    125          	ADC_DeInit(ADC1);
+    126          	
+    127            GPIO_Init(GPIOA, GPIO_Pin_5, GPIO_Mode_In_FL_No_IT );
+    128            /* Enable ADC1 clock */
+    129            CLK_PeripheralClockConfig(CLK_Peripheral_ADC1, ENABLE);
+    130            /* Initialise and configure ADC1 */
+    131            ADC_Init(ADC1, ADC_ConversionMode_Continuous, ADC_Resolution_12Bit, ADC_Prescaler_2); 
+    132            ADC_SamplingTimeConfig(ADC1, ADC_Group_SlowChannels, ADC_SamplingTime_24Cycles);
+    133            /* Enable ADC1 */
+    134            ADC_Cmd(ADC1, ENABLE);
+    135            /* Disable SchmittTrigger for ADC_Channel, to save power */
+    136            ADC_SchmittTriggerConfig(ADC1, ADC_Channel_1, DISABLE);
+    137            /* Enable ADC1 Channel 3 */
+    138            ADC_ChannelCmd(ADC1, ADC_Channel_1, ENABLE);
+    139            /* Start ADC1 Conversion using Software trigger*/
+    140            ADC_SoftwareStartConv(ADC1);
+    141            ADC_Cmd(ADC1,DISABLE);
+    142          }
+    143          
+    144          //读电量，输入参数1为开锁时读取电压，0为待机读取；返回电量值
+    145          uint16 Get_ADC_Value(uint8 type)
+    146          {
+    147          	uint32 vo_data,check_data,vrefint_data;
+    148              /* Calculate voltage value*/
+    149          	/*3.5V--913;4.0V--1035; 4.5V--1159; 4.9V--1240; 5.3V--1306; 5.7V--1361; 6.1V--1408; 6.4V--1431*/
+    150          	/*v=(1.224/ADC_Data)*255	   // ADC需要转成十进制数进行计算*/
+    151          	ADC_DeInit(ADC1);
+    152          	ADC_Cmd(ADC1,ENABLE);
+    153                 ADC_VrefintCmd(ENABLE);		//使能内部参考电压
+    154          
+    155          	ADC_ChannelCmd(ADC1, ADC_Channel_1, ENABLE);
+    156          	ADC_SoftwareStartConv(ADC1);
+    157          	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC)==RESET);
+    158          	check_data = ADC_GetConversionValue(ADC1);
+    159          	ADC_ChannelCmd(ADC1, ADC_Channel_1, DISABLE);
+    160          
+    161          	ADC_ChannelCmd(ADC1, ADC_Channel_Vrefint, ENABLE);	//使能内部参考电压通道
+    162          	ADC_SoftwareStartConv(ADC1);
+    163          	while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC)==RESET);
+    164          	vrefint_data = ADC_GetConversionValue(ADC1);
+    165          	ADC_ChannelCmd(ADC1, ADC_Channel_Vrefint, DISABLE);
+    166                 ADC_VrefintCmd(DISABLE);	//失能内部参考电压
+    167          	ADC_Cmd(ADC1,DISABLE);
+    168          
+    169          	vo_data = 1224*check_data/vrefint_data;
+    170          	if(type==0)
+    171          	{
+    172          		ADC_VALUE_CALCULATE += vo_data;
+    173          		adc_cnt++;	
+    174          		if(adc_cnt==4)
+    175          		{	ADCdata=ADC_VALUE_CALCULATE/4;
+    176          			ADC_VALUE_CALCULATE=0;
+    177          			adc_cnt=0;
+    178          			if(ADCdata < voltage_down_level)
+    179          			{
+    180          				power_level_state = POWER_DOWN;
+    181          			}
+    182          			else if(ADCdata < voltage_lower_level)
+    183          			{
+    184          				power_level_state = POWER_REMIND;
+    185          			}
+    186          			Moudleinfo.batt = ADCdata;
+    187          		}
+    188          		if(had_get_adc_flag == FALSE)
+    189          		{
+    190          			had_get_adc_flag = TRUE;
+    191          			Moudleinfo.batt = vo_data;
+    192          			if(vo_data < voltage_lower_level)
+    193          			{
+    194          				power_level_state = POWER_REMIND;
+    195          			}
+    196          		}
+    197          		if(vo_data > voltage_high_level)
+    198          		{
+    199          			if(power_level_state<=POWER_REMIND)
+    200          				Moudleinfo.batt = vo_data;
+    201          			power_level_state = POWER_FULL;
+    202          			low_power_report_flag = FALSE;
+    203          		}
+    204          		else if(vo_data > voltage_work_level)
+    205          		{
+    206          			//关机后4.5V以上可以开启工作
+    207          			if(power_level_state == POWER_DOWN)
+    208          			{
+    209          				power_level_state = POWER_REMIND;
+    210          			}
+    211          		}
+    212          	}
+    213          	return vo_data;
+    214          }
+    215          
+    216          
+    217          RTC_AlarmTypeDef  RTC_AlarmStr;
+    218          
+    219          /**
+    220            * @brief  Calendar Configuration.
+    221            * @param  None
+    222            * @retval None
+    223            */
+    224          
+    225          
+    226          
+    227          
+    228          /**
+    229            * @brief  RTC Tamper Configuration.
+    230            * @param  None
+    231            * @retval None
+    232            */
+    233          void Tamper_Init(void)
+    234          {
+    235            RTC_TamperFilterConfig((RTC_TamperFilter_TypeDef)RTC_TampFilter[TampFilterIndex]);
+    236            RTC_TamperSamplingFreqConfig(RTC_TamperSamplingFreq_RTCCLK_Div32768);
+    237          
+    238            RTC_TamperPinsPrechargeDuration(RTC_TamperPrechargeDuration_None);
+    239            RTC_TamperLevelConfig(RTC_Tamper_1, RTC_TamperLevel_Low );
+    240            RTC_TamperCmd(RTC_Tamper_1, ENABLE);
+    241            RTC_ITConfig(RTC_IT_TAMP, ENABLE);
+    242          
+    243          
+    244          /*  
+    245          	RTC_AlarmCmd(DISABLE);
+    246          	RTC_AlarmStructInit(&amp;RTC_AlarmStr);
+    247          	RTC_AlarmStr.RTC_AlarmTime.RTC_Hours   = 01;
+    248          	RTC_AlarmStr.RTC_AlarmTime.RTC_Minutes = 03;
+    249          	RTC_AlarmStr.RTC_AlarmTime.RTC_Seconds = 01;
+    250          	RTC_AlarmStr.RTC_AlarmMask = RTC_AlarmMask_DateWeekDay;
+    251          	RTC_SetAlarm(RTC_Format_BIN, &amp;RTC_AlarmStr);
+    252             
+    253          	RTC_ITConfig(RTC_IT_ALRA, ENABLE);
+    254          	RTC_AlarmCmd(ENABLE);
+    255          	RTC_ITConfig(RTC_IT_WUT, DISABLE);
+    256          */
+    257          }
+    258          
+    259          
+    260          /**
+    261            * @brief  Wait 1 sec for LSE stabilisation .
+    262            * @param  None.
+    263            * @retval None.
+    264            * Note : TIM4 is configured for a system clock = 2MHz
+    265            */
+    266          void LSE_StabTime(void)
+    267          {
+    268            CLK_PeripheralClockConfig(CLK_Peripheral_TIM4, ENABLE);
+    269          
+    270            /* Configure TIM4 to generate an update event each 1 s */
+    271            TIM4_TimeBaseInit(TIM4_Prescaler_16384, 123);
+    272          
+    273            /* Enable TIM4 */
+    274            TIM4_Cmd(ENABLE);
+    275          
+    276            /* Wait 1 sec */
+    277            while ( TIM4_GetFlagStatus(TIM4_FLAG_Update) == RESET );
+    278          
+    279            TIM4_ClearFlag(TIM4_FLAG_Update);
+    280          
+    281            /* Disable TIM4 */
+    282            TIM4_Cmd(DISABLE);
+    283          
+    284            CLK_PeripheralClockConfig(CLK_Peripheral_TIM4, DISABLE);
+    285          }
+    286          
+    287          void SystemClock_Init(void)
+    288          {
+    289          //使用宏定义的写法
+    290           
+    291          #ifdef  HSE_Enable
+    292               while (!CLK_ClockSwitchConfig(CLK_SWITCHMODE_AUTO, CLK_SOURCE_HSE, DISABLE,\
+    293                      CLK_CURRENTCLOCKSTATE_DISABLE));
+    294               //切换到外部时钟,并等待时钟却换成功
+    295          #else
+    296          //	CLK_HSICmd(ENABLE);
+    297          //	CLK_SYSCLKSourceConfig(CLK_SYSCLKSource_HSI);
+    298          //	CLK_SYSCLKDivConfig(CLK_SYSCLKDiv_1); 
+    299          
+    300          	CLK_HSICmd(ENABLE);             //打开高速内部时钟
+    301          
+    302            // while ( (CLK_GetFlagStatus(CLK_FLAG_HSIRDY) == RESET));
+    303          
+    304          
+    305          	while (((CLK->ICKCR)& 0x02)!=0x02);
+    306          
+    307          	CLK_SYSCLKSourceConfig(CLK_SYSCLKSource_HSI);
+    308          	CLK_SYSCLKDivConfig(CLK_SYSCLKDiv_1);
+    309          	if (CLK_GetSYSCLKSource() != CLK_SYSCLKSource_HSI)
+    310          	{
+    311          		CLK_SYSCLKSourceSwitchCmd(ENABLE);
+    312          		while (((CLK->SWCR)& 0x01)==0x01);
+    313          	}
+    314          #endif   
+    315          }
+    316          
+    317          //配置GPIO口，这边把不需要的IO口都设置为高电平推挽输出，以降低功耗
+    318          void GPIO_LowPower_Config(void)
+    319          {
+    320          	GPIO_Init(GPIOD,GPIO_Pin_2 | GPIO_Pin_7,GPIO_Mode_Out_PP_High_Slow);
+    321          	GPIO_Init(GPIOF,GPIO_Pin_0 | GPIO_Pin_1,GPIO_Mode_Out_PP_High_Slow);
+    322          }
+    323          unsigned long int GsensorGetStepCount(void)
+    324          {
+    325          	unsigned long int Step=0;
+    326          	/* bma2x2acc_data structure used to read accel xyz data*/
+    327          	struct bma2x2_accel_data sample_xyz;
+    328          	/* Local variable used to assign the bandwidth value*/
+    329          	u8 bw_value_u8 = BMA2x2_INIT_VALUE;
+    330          #if 0 
+    331          	/* bma2x2acc_data_temp structure used to read
+    332          		accel xyz and temperature data*/
+    333          	struct bma2x2_accel_data_temp sample_xyzt;
+    334          	/* Local variable used to set the bandwidth value*/
+    335          	u8 banwid = BMA2x2_INIT_VALUE;
+    336          #endif	
+    337          	bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
+    338          
+    339          	/* This API used to Write the bandwidth of the sensor input
+    340          	value have to be given
+    341          	bandwidth is set from the register 0x10 bits from 1 to 4*/
+    342          	bw_value_u8 = 0x08;/* set bandwidth of 7.81Hz*/
+    343          	bma2x2_set_bw(bw_value_u8);
+    344          #if 0	
+    345          	/* This API used to read back the written value of bandwidth*/
+    346          	bma2x2_get_bw(&banwid);
+    347          
+    348          	/* Read the accel X data*/
+    349          	bma2x2_read_accel_x(&accel_x_s16);
+    350          	/* Read the accel Y data*/
+    351          	bma2x2_read_accel_y(&accel_y_s16);
+    352          	/* Read the accel Z data*/
+    353          	bma2x2_read_accel_z(&accel_z_s16);
+    354          
+    355          	
+    356          	/* accessing the bma2x2acc_data_temp parameter by using sample_xyzt*/
+    357          	/* Read the accel XYZT data*/
+    358          	bma2x2_read_accel_xyzt(&sample_xyzt);
+    359          #endif
+    360          	/* accessing the bma2x2acc_data parameter by using sample_xyz*/
+    361          	/* Read the accel XYZ data*/
+    362          	bma2x2_read_accel_xyz(&sample_xyz);
+    363          
+    364          	PEDO_ProcessAccelarationData(sample_xyz.x, sample_xyz.y, sample_xyz.z);
+    365          
+    366          	Step = PEDO_GetStepCount();
+    367          	
+    368          	bma2x2_set_power_mode(BMA2x2_MODE_DEEP_SUSPEND);
+    369          
+    370          	return Step;
+    371          }
+    372          
+    373          void IWDG_Config(void)
+    374          {
+    375            /* Enable IWDG (the LSI oscillator will be enabled by hardware) */
+    376            /*启动IWDG*/
+    377            IWDG_Enable(); 
+    378            
+    379            /* IWDG timeout equal to 214 ms (the timeout may varies due to LSI frequency
+    380               dispersion) */
+    381            /* Enable write access to IWDG_PR and IWDG_RLR registers */
+    382            /*解除PR及RLR的写保护*/
+    383            IWDG_WriteAccessCmd(IWDG_WriteAccess_Enable);
+    384            
+    385            /* IWDG configuration: IWDG is clocked by LSI = 38KHz */
+    386            /*分频系数为64 1.02s*/
+    387            IWDG_SetPrescaler(IWDG_Prescaler_256);
+    388            
+    389            /* IWDG timeout equal to 214.7 ms (the timeout may varies due to LSI frequency dispersion) */
+    390            /* IWDG timeout = (RELOAD_VALUE + 1) * Prescaler / LSI 
+    391                            = (254 + 1) * 256 / 38 000 
+    392                            = 1.718 s */
+    393            /*看门狗计数器重装载数值*/
+    394            IWDG_SetReload(254);
+    395            
+    396            /* Reload IWDG counter 
+    397            刷新IDDG，避免产生看门狗复位
+    398           看门狗计数器重装载数值护状态*/
+    399            IWDG_ReloadCounter();
+    400          }
+    401          
+    402          void delay_ms(uint16 time) 
+    403          {         
+    404          	uint16 i=0;      
+    405          	while(time--)    
+    406          	{        
+    407          		i=1600;   //自己定义STM32  1ms      
+    408          		while(i--)
+    409          			;
+    410          	}
+    411          }
+    412          
+    413          //====================================================================//
+    414          // 实现功能：时钟切换：HSI-->LSI
+    415          // 参    数：无
+    416          // 返 回 值：无
+    417          //====================================================================//
+    418          void go_to_sleep(void)
+    419          {
+    420          	Sleep_flag=1;
+    421          	{
+    422          		CLK_LSEConfig(CLK_LSE_ON);                  		  //目标CLK 先开启
+    423          		while (((CLK->ECKCR)& 0x08)!=0x08);          		 //等待目标CLK稳定,f=32768Hz
+    424          		CLK_SYSCLKDivConfig(CLK_SYSCLKDiv_1);      	   //设定目标 CLK的分频参数
+    425          		CLK_SYSCLKSourceConfig(CLK_SYSCLKSource_LSI); //设定此CLK 为切换目标CLK
+    426          		CLK_SYSCLKSourceSwitchCmd(ENABLE);     	       //开始CLK 切换
+    427          		CLK->SWCR |=0X01;                           			  //
+    428          		while (((CLK->SWCR)& 0x01)==0x01);			//等待切换后的CLK稳定
+    429          		CLK->SWCR &=0X00;
+    430          		CLK_HSICmd(DISABLE);                   		       //关闭原先的 CLK source
+    431          
+    432          		CLK_HaltConfig(CLK_Halt_FastWakeup,ENABLE);	//快速唤醒
+    433          	//	PWR_FastWakeUpCmd(ENABLE);
+    434          		PWR_UltraLowPowerCmd(ENABLE);				//超低功耗
+    435          
+    436          	//	disableInterrupts();  
+    437          		sim();                                                     //屏蔽中断
+    438          	//	enableInterrupts();
+    439          	}
+    440          
+    441          	halt(); 										 //进入Active-Halt模式
+    442          }
+    443          
+    444          /*低功耗模式*/
+    445          void low_power_mode(void)
+    446          {
+    447          #if 0
+    448          	//设置低功耗
+    449          //	TIM2_Cmd(DISABLE);
+    450          	GPIO_Init(POWER_ADC_GPIO, POWER_ADC_PIN, GPIO_Mode_Out_PP_Low_Slow );
+    451          	TIM3_Cmd(DISABLE);
+    452          	Uart_PowerLow_Config();
+    453          
+    454          	net_low_poewr_mode();
+    455          	load_continuous_flag = FALSE;
+    456          	go_to_sleep();
+    457          #endif
+    458          }
+    459          
+    460          /**********************************************************************
+    461          *FUNCTION NAME	: get_rtc_time
+    462          *CREATE	DATA	: 
+    463          *CREATED BY		: 
+    464          *FUNCTION		:获取时间
+    465          *MODIFY	DATA	:
+    466          *INPUT			:
+    467          *OUTPUT			: 
+    468          *RETURN			: 
+    469          ***********************************************************************/
+    470          void get_rtc_time(void)
+    471          {
+    472          	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStr);
+    473          	RTC_GetDate(RTC_Format_BIN, &RTC_DateStr);
+    474          	if(RTC_DateStr.RTC_Date != last_date)
+    475          	{
+    476          		last_date = RTC_DateStr.RTC_Date;
+    477          	}
+    478          }
+    479          
+    480          /*工作模式*/
+    481          void go_to_work(void)
+    482          {
+    483          	SystemClock_Init();
+    484          	GPIO_Init(POWER_ADC_GPIO, POWER_ADC_PIN, GPIO_Mode_In_FL_No_IT );//
+    485          	if(power_level_state == POWER_DOWN)
+    486          	{
+    487          		delay_ms(500);
+    488          		Get_ADC_Value(0);
+    489          		if(power_level_state == POWER_DOWN)
+    490          		{
+    491          			GPIO_Init(POWER_ADC_GPIO, POWER_ADC_PIN, GPIO_Mode_Out_PP_Low_Slow );//
+    492          			return;
+    493          		}
+    494          	}
+    495          	lowpowerwait_flag = WORK_MODE;
+    496          	ModuleResetTime = MOUDLE_WORKING_MAX_TIME;
+    497          	TIM3_Cmd(ENABLE);
+    498          
+    499          	Uart_PowerOn_Config ();
+    500          	set_sleep_counter_max(0);
+    501          	UART1_SendByte(0);
+    502          	get_rtc_time();
+    503          }
+    504          
+    505          /*设置睡眠超时的最小值*/
+    506          void set_sleep_counter_min(uint16 n)
+    507          {
+    508          	if(sleep_counter < n)
+    509          		sleep_counter = n;
+    510          }
+    511          
+    512          /*设置睡眠超时的最大值*/
+    513          void set_sleep_counter_max(uint16 n)
+    514          {
+    515          	if(sleep_counter > n)
+    516          		sleep_counter = n;
+    517          	if((ModuleSts != MODULE_SEND_STS)&&(sleep_counter==0))
+    518          		sleep_counter = KEEP_WORK_MAX_TIME-12;
+    519          }
+    520          
+    521          void set_rtc_interrupt_flag(uint8 type)
+    522          {
+    523           	rtc_interrupt_flag = TRUE;
+    524          }
+    525          
+    526          /*按键唤醒处理*/
+    527          void wake_up_from_sleep(void)
+    528          {
+    529          
+    530          	if(lowpowerwait_flag == SLEEP)
+    531          		go_to_work();
+    532          }
+    533          
+    534           //RTC 1S处理函数
+    535          uint8  RTC_handle(void)
+    536          {
+    537          	uint8 Succ=1;
+    538          
+    539          	if(rtc_interrupt_flag == FALSE)
+    540          		return 0;
+    541          
+    542          	rtc_interrupt_flag = FALSE;
+    543          
+    544          	ms500Count++;
+    545          
+    546          	if(sleep_counter < 60)
+    547          	{
+    548          		sleep_counter++;
+    549          		if(sleep_counter == KEEP_WORK_MAX_TIME)
+    550          		{
+    551          			if((EventReadPtr==EventWritePtr) 
+    552          				&& (net_link_cclk_flag || (g_at_no_response>10))
+    553          				&&(tcp_had_linked_flag==FALSE)
+    554          				)
+    555          			{
+    556          				lowpowerwait_flag = SLEEP;
+    557          				low_power_mode();
+    558          			}
+    559          			else
+    560          				sleep_counter --;
+    561          				
+    562          		}
+    563          		if(lowpowerwait_flag == WORK_MODE)
+    564          		{
+    565          			if ((ModuleResetTime == 0) || (power_level_state == POWER_DOWN))
+    566          			{
+    567          				lowpowerwait_flag = SLEEP;
+    568          				low_power_mode();
+    569          			}
+    570          		}
+    571          		if(g_system_reset_time)
+    572          		{
+    573          			g_system_reset_time --;
+    574          			if(g_system_reset_time == 0)
+    575          			{
+    576          				wake_up_from_sleep();
+    577          				disableInterrupts();  
+    578          				asm("JPF $8000"); 
+    579          			}
+    580          		}
+    581          	}
+    582          	if (power_level_state == POWER_DOWN)
+    583          		return 0;
+    584          		
+    585          	if((ms500Count%120)==0)
+    586          	{
+    587          		ModuleResetHandle();
+    588          	}
+    589          
+    590          	if(lowpowerwait_flag==WORK_MODE)
+    591          	{
+    592          		if (Moudleinfo.SendFlag==1)
+    593          		{
+    594          			   SendAtTimeCount++;
+    595          			   
+    596          			   if (SendAtTimeCount>4)
+    597          			   {
+    598          				   SendAtTimeCount=0;
+    599          				   Moudleinfo.SendFlag=0;
+    600          			   }
+    601          		}
+    602          		else SendAtTimeCount=0;
+    603          		LinkNetTimeOutHandle();
+    604          		if(ms500Count&0x01)
+    605          		{
+    606          			RTC_TimeStr.RTC_Seconds++;
+    607          			if(RTC_TimeStr.RTC_Seconds >= 60)
+    608          			{
+    609          				get_rtc_time();
+    610          				Get_ADC_Value(0);
+    611          			}
+    612          			//启动180秒模块没有有效网络数据则进入睡眠
+    613          			if(ModuleResetTime)
+    614          			{
+    615          				ModuleResetTime--;
+    616          				if(ModuleResetTime < 2)
+    617          				{
+    618          					set_net_state(MODULE_INI_STS);
+    619          					tcp_had_linked_flag = FALSE;
+    620          				}
+    621          			}
+    622          		}
+    623          	}
+    624          
+    625             if (Succ==0) return 1;
+    626          
+    627             return 0;
+    628          }
+    629          
+    630          void TimingDelay_Decrement(void)
+    631          {
+    632          
+    633          }
+    634          
+    635          void IniBuf(void)
+    636          {
+    637            memset(&Moudleinfo,0,sizeof(MODULEINFO));
+    638            EventReadPtr=EventWritePtr=0;
+    639            had_get_adc_flag = FALSE;
+    640          }
+    641          
+    642          /*读取复位状态寄存器*/
+    643          uint8 READ_RST_CR(void)
+    644          {
+    645          	uint8 temp=0,k;
+    646          	temp = RST->SR;
+    647          	if((temp&0x3e) !=0)
+    648          	{
+    649          		hw_eeprom_read_bytes(NV_RST_CR,(unsigned char*)&k,1);
+    650          		hw_eeprom_write_bytes(NV_BACK_RST_CR,(unsigned char*)&k, 1);
+    651          		hw_eeprom_write_bytes(NV_RST_CR,(unsigned char*)&temp, 1);
+    652          	}
+    653          	RST->SR |= 0x3F; 
+    654          	return temp;
+    655          }
+    656          
+    657          //事件队列处理
+    658          void EVENT_Message_Handle(void)
+    659          {
+    660          	EVENTINFO TempEvent;
+    661          
+    662          	if (GetOneEvent(&TempEvent))
+    663          	{
+    664          		
+    665          		switch (TempEvent.type)
+    666          		{
+    667          			case PASS_ERROR_OVERTIME_EVENT:
+    668          			case PASS_OVERLEN_OVERTIME_EVENT:
+    669          			{
+    670          				set_sleep_counter_min(KEEP_WORK_MAX_TIME-2);
+    671          			}break;
+    672          			
+    673          			default:break;
+    674          		}
+    675          	}
+    676          
+    677          }
+    678          
+    679          void main(void)
+    680          {   
+    681          /**********************  variable   ********************************************/
+    682          	uint8 result;
+    683          	uint32 step;
+    684          /************************GPIO USART I2C SPI Initialization **************************/
+    685          	SystemClock_Init();             //配置系统时钟
+    686          	hw_board_gpio_init();       //GPIO INIT(NB/WIFI -- POWER&RESET)
+    687          	GPIO_LowPower_Config();  //UNUSED GPIO CONFIG
+    688          	Gsensor_IIC_Init();           //I2C INIT
+    689          	hw_eeprom_flash_init();   //EEPROM INIT
+    690          	Uart_Init();                      //USART INIT
+    691          	ADC_Config();			//ADC INIT
+    692          	Timer3_Init();               	//20ms定时器中断初始化
+    693          	RTC_Config_Init();		//RTC INIT
+    694          	set_rtc_wake_time(period_1000ms);   //设置rtc唤醒时间
+    695          /************************NB MODEM POWER ON ,at least 500 ms falling troggle ***********/
+    696          	GPIO_SetBits(NB_POWKEY_T, NB_POWKEY_P);
+    697          	delay_ms(800);
+    698                  GPIO_ResetBits(NB_POWKEY_T, NB_POWKEY_P);
+    699          /************************WIFI MODEM POWER ON ,at least 500 (μs) falling troggle *********/
+    700          	GPIO_SetBits(WIFI_KEYPOWER_T, WIFI_KEYPOWER_P);
+    701            	GPIO_SetBits(WIFI_RESET_T, WIFI_RESET_P);
+    702          /***********************APPLICATION INIT**************************************/
+    703          	IniBuf();
+    704          	ModuleResetInit();
+    705          	ModuleSts=MODULE_INI_STS;     //模块初始状态
+    706          	Protocol_Init();
+    707           	BMA253_Init();
+    708          /************************************************************/	
+    709          #ifdef SUPPORT_IWDG
+    710          	IWDG_Config();				//ENABLE WATCH DOG
+    711          #endif
+    712          	go_to_work();    //ENTRY  WORK MODE 
+    713          	sim();             //DISABLE  INTERRUPT 
+    714          	rim();		   //ENABLE  INTERRUPT 
+    715          /************************************************************/
+    716          	//检测睡眠条件
+    717          	result = READ_RST_CR();
+    718          	Get_ADC_Value(0);
+    719          	if((Moudleinfo.batt < voltage_down_level) 
+    720          		&& (result&RST_SR_BORF) 
+    721          		)
+    722          	{
+    723          		power_level_state = POWER_DOWN;
+    724          		lowpowerwait_flag = SLEEP;
+    725          		low_power_mode();
+    726          	}
+    727          /*************************************************************/
+    728          	
+    729          	#if 0
+    730          	while (1)
+    731          	{
+    732          #ifdef SUPPORT_IWDG
+    733          		/* Reload IWDG counter 刷新IDDG，避免产生看门狗复位*/
+    734          		IWDG_ReloadCounter();  
+    735          #endif
+    736          		//刷卡检测
+    737          		if (RTC_handle()==1)
+    738          		{
+    739          			wake_up_from_sleep();
+    740          		}
+    741          		//检测睡眠条件
+    742          		if(lowpowerwait_flag == SLEEP)
+    743          		{
+    744          			halt(); 					//进入WFI模式	  
+    745          			SystemClock_Init();
+    746          		}
+    747          		else 
+    748          		{
+    749          			//处理NB模块接收数据
+    750          			RecAtComFormMoudle();
+    751          			//事件队列处理
+    752          			EVENT_Message_Handle();
+    753          			//网络处理
+    754          			net_link_handle();
+    755          		
+    756          //			if (EventReadPtr == EventWritePtr)
+    757          //				wfi();
+    758          		}
+    759          
+    760          	}	
+    761          	#else
+    762          	while(1)
+    763          	{
+    764                             delay_ms(1000);
+    765          		  	LightenLed(GREENLED);
+    766            			ExtinguishLed(REDLED);
+    767          			//step=GsensorGetStepCount();
+    768                             UART2_SendStr((uint8*)"AT\r\n",strlen("AT\r\n"));
+    769          			delay_ms(1000);	
+    770          			LightenLed(REDLED);
+    771            			ExtinguishLed(GREENLED);	
+    772          	}
+    773          	#endif
+    774          
+    775          }
+    776          	
+    777                          
+    778          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       5  ?_0
+     105  ADC_Config
+       2  ADC_VALUE_CALCULATE
+       2  ADCdata
+      36  EVENT_Message_Handle
+      27  GPIO_LowPower_Config
+     382  Get_ADC_Value
+      82  GsensorGetStepCount
+      27  IWDG_Config
+      29  IniBuf
+       1  IniFlagFlag
+      56  LSE_StabTime
+       1  ModuleSts
+      73  READ_RST_CR
+       7  RTC_AlarmStr
+       4  RTC_DateStr
+       4  RTC_TampFilter
+       4  RTC_TimeStr
+     309  RTC_handle
+       2  SendAtTimeCount
+       1  Sleep_flag
+      42  SystemClock_Init
+       1  TampFilterIndex
+      51  Tamper_Init
+      82  Tim2Delay_Init
+       1  TimingDelay_Decrement
+       1  adc_cnt
+      38  delay_ms
+       1  g_system_reset_time
+      31  get_rtc_time
+      80  go_to_sleep
+      91  go_to_work
+       1  had_get_adc_flag
+       1  last_date
+       1  load_continuous_flag
+       1  low_power_mode
+       1  low_power_report_flag
+       1  lowpowerwait_flag
+     203  main
+       2  ms500Count
+       1  net_link_cclk_flag
+       1  power_level_state
+       1  rtc_interrupt_flag
+       5  set_rtc_interrupt_flag
+      37  set_sleep_counter_max
+      19  set_sleep_counter_min
+       1  sleep_counter
+      12  wake_up_from_sleep
+
+ 
+ 1 819 bytes in section .far_func.text
+    34 bytes in section .near.bss
+     4 bytes in section .near.data
+     9 bytes in section .near.rodata
+ 
+ 1 819 bytes of CODE  memory
+     9 bytes of CONST memory
+    38 bytes of DATA  memory
+
+Errors: none
+Warnings: 9

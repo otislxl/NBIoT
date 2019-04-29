@@ -1,0 +1,2846 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:09:23
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Pedometer.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Pedometer.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\Pedometer.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\Pedometer.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Pedometer.c
+      1          /* EasyCASE V6.5 17/06/2011 11:58:51 */
+      2          /* EasyCASE O
+      3          If=vertical
+      4          LevelNumbers=no
+      5          LineNumbers=no
+      6          Colors=16777215,0,12582912,12632256,0,0,0,16711680,8388736,0,33023,32768,0,0,0,0,0,32768,12632256,255,65280,255,255,16711935
+      7          ScreenFont=Courier New,Standard,80,4,-11,0,400,0,0,0,0,0,0,3,2,1,49,96,96
+      8          PrinterFont=Courier New,,80,4,-66,0,400,0,0,0,0,0,0,3,2,1,49,600,600
+      9          LastLevelId=101778 */
+     10          /* EasyCASE ( 1
+     11             Pedometer.c */
+     12          /***************************************************************************************************
+     13           *
+     14           * (C) All rights reserved by ROBERT BOSCH GMBH
+     15           *
+     16           **************************************************************************************************/
+     17          /*  $Date: 2011/01/11
+     18           *  $Revision: 2.0 $
+     19           *
+     20           */
+     21          
+     22          /**************************************************************************************************
+     23          * Copyright (C) 2011 Bosch Sensortec GmbH
+     24          *
+     25          * Pedometer.c
+     26          *
+     27          * Usage: This file will be used to get the Total Steps, Steps(Delta, Last activity, Current Activity),
+     28          * User Activity type, Cadence(Steps/sec), Distance( Delta, Last Activity, Currrent Activity), Speed, 
+     29          * Dyanamic Step Length, etc.
+     30          * 
+     31          *                
+     32          *
+     33          * Author: Rajender.Singh@in.bosch.com & Aibin.Paul@in.bosch.com 
+     34          **************************************************************************************************/
+     35          /* EasyCASE ( 5
+     36             Disclaimer */
+     37          /*************************************************************************************************/
+     38          /*  Disclaimer
+     39          *
+     40          * Common:
+     41          * Bosch Sensortec products are developed for the consumer goods industry. They may only be used
+     42          * within the parameters of the respective valid product data sheet.  Bosch Sensortec products are
+     43          * provided with the express understanding that there is no warranty of fitness for a particular purpose.
+     44          * They are not fit for use in life-sustaining, safety or security sensitive systems or any system or device
+     45          * that may lead to bodily harm or property damage if the system or device malfunctions. In addition,
+     46          * Bosch Sensortec products are not fit for use in products which interact with motor vehicle systems.
+     47          * The resale and/or use of products are at the purchaser抯 own risk and his own responsibility. The
+     48          * examination of fitness for the intended use is the sole responsibility of the Purchaser.
+     49          *
+     50          * The purchaser shall indemnify Bosch Sensortec from all third party claims, including any claims for
+     51          * incidental, or consequential damages, arising from any product use not covered by the parameters of
+     52          * the respective valid product data sheet or not approved by Bosch Sensortec and reimburse Bosch
+     53          * Sensortec for all costs in connection with such claims.
+     54          *
+     55          * The purchaser must monitor the market for the purchased products, particularly with regard to
+     56          * product safety and inform Bosch Sensortec without delay of all security relevant incidents.
+     57          *
+     58          * Engineering Samples are marked with an asterisk (*) or (e). Samples may vary from the valid
+     59          * technical specifications of the product series. They are therefore not intended or fit for resale to third
+     60          * parties or for use in end products. Their sole purpose is internal client testing. The testing of an
+     61          * engineering sample may in no way replace the testing of a product series. Bosch Sensortec
+     62          * assumes no liability for the use of engineering samples. By accepting the engineering samples, the
+     63          * Purchaser agrees to indemnify Bosch Sensortec from all claims arising from the use of engineering
+     64          * samples.
+     65          *
+     66          * Special:
+     67          * This software module (hereinafter called "Software") and any information on application-sheets
+     68          * (hereinafter called "Information") is provided free of charge for the sole purpose to support your
+     69          * application work. The Software and Information is subject to the following terms and conditions:
+     70          *
+     71          * The Software is specifically designed for the exclusive use for Bosch Sensortec products by
+     72          * personnel who have special experience and training. Do not use this Software if you do not have the
+     73          * proper experience or training.
+     74          *
+     75          * This Software package is provided `` as is `` and without any expressed or implied warranties,
+     76          * including without limitation, the implied warranties of merchantability and fitness for a particular
+     77          * purpose.
+     78          *
+     79          * Bosch Sensortec and their representatives and agents deny any liability for the functional impairment
+     80          * of this Software in terms of fitness, performance and safety. Bosch Sensortec and their
+     81          * representatives and agents shall not be liable for any direct or indirect damages or injury, except as
+     82          * otherwise stipulated in mandatory applicable law.
+     83          *
+     84          * The Information provided is believed to be accurate and reliable. Bosch Sensortec assumes no
+     85          * responsibility for the consequences of use of such Information nor for any infringement of patents or
+     86          * other rights of third parties which may result from its use. No license is granted by implication or
+     87          * otherwise under any patent or patent rights of Bosch. Specifications mentioned in the Information are
+     88          * subject to change without notice.
+     89          *
+     90          * It is not allowed to deliver the source code of the Software to any third party without permission of
+     91          * Bosch Sensortec.
+     92          */
+     93          /*************************************************************************************************/
+     94          /* EasyCASE ) */
+     95          /* EasyCASE ( 100012
+     96             File Name For Doxy */
+     97          /*! \file Pedometer.c
+     98              \brief  This file will be used to get the Total Steps, Steps(Delta, Last activity, Current Activity),
+     99                      User Activity type, Cadence(Steps/sec), Distance( Delta, Last Activity, Currrent Activity), Speed, 
+    100                      Dyanamic Step Length etc. */
+    101          /* EasyCASE ) */
+    102          /* EasyCASE ( 247
+    103             Includes */
+    104          /* EasyCASE ( 912
+    105             Standard includes */
+    106          /* EasyCASE = */
+    107          /* EasyCASE ) */
+    108          /* EasyCASE ( 100013
+    109             Module Includes */
+    110          #include "define.h"
+    111          #include "Pedometer.h"
+    112          #include "PedoSupport.h"
+    113          //#include "bma255.h"
+    114          /* EasyCASE ) */
+    115          /* EasyCASE ) */
+    116          /* EasyCASE ( 63
+    117             Local Declarations and Definitions */
+    118          /* EasyCASE ( 322
+    119             Protected Data Interfaces (PDIs) */
+    120          /* EasyCASE ) */
+    121          /* EasyCASE ( 101093
+    122             #Define Constants */
+    123          /* PATTERN RECOGNITION ( ACCELERATION LOWER-PEAK, UPPER-PEAK THRESOLD LIMITS ) */
+    124          
+    125          #define WALKING_LOWER_LIMIT                     100>>V_DivideFactor_U8R     /**< Stable Axis Lower Threshold for Walk step */
+    126          #define WALKING_UPPER_LIMIT                     400>>V_DivideFactor_U8R     /**< Stable Axis Upper Threshold for Walk step */
+    127          #define LAZY_WALKING_LOWER_LIMIT_Robust         50>>V_DivideFactor_U8R      /**< Stable Axis Lower Threshold for Lazy Walk step(Robust) */
+    128          #define LAZY_WALKING_LOWER_LIMIT_NoRobust       32>>V_DivideFactor_U8R      /**< Stable Axis Lower Threshold for Lazy Walk step(Non-Robust) */
+    129          #define LAZY_WALKING_UPPER_LIMIT                160>>V_DivideFactor_U8R     /**< Stable Axis Upper Threshold for Lazy Walk step */
+    130          #define JOG_LOWER_LIMIT                         100>>V_DivideFactor_U8R     /**< Stable Axis Lower Threshold for Jog step */
+    131          #define JOG_UPPER_LIMIT                         17000>>V_DivideFactor_U8R   /**< Stable Axis Upper Threshold for Jog step */
+    132          #define C_SENSOR_NOISE_LEVEL_U8X                20>>V_DivideFactor_U8R /**< Variation of Acceleration Value When kept idle? */
+    133          
+    134          /* PATTERN RECOGNITION ( TREND CYCLE LIMITS FOR DIFF ACTIVITIES ) */
+    135          
+    136          #define WALKING_CYCLE_LOWER_LIMIT               5       /**< Trend cycle count lower limit for walking */
+    137          #define WALKING_CYCLE_UPPER_LIMIT               21      /**< Trend cycle count upper limit for walking */
+    138          #define LAZY_WALKING_CYCLE_LOWER_LIMIT          10      /**< Trend cycle count lower limit for lazy walking */
+    139          #define LAZY_WALKING_CYCLE_UPPER_LIMIT          32      /**< Trend cycle count upper limit for lazy walking */
+    140          #define JOG_CYCLE_LOWER_LIMIT                   4       /**< Trend cycle count lower limit for jogging */
+    141          #define JOG_CYCLE_UPPER_LIMIT                   15      /**< Trend cycle count upper limit for jogging */
+    142          #define MAX_COUNT_DIFFERENCE                    3       /**< Difference between 2 adjacent steps*/
+    143          
+    144          /* PATTERN RECOGNITION ( STEP-TO-STEP INTERVAL LIMITS FOR DIFF ACTIVITIES ) */
+    145          
+    146          #define C_LazyWalkStepToStepLowerLimit_U8X      18      /**< Step-To-Step count lower limit for lazy walk */
+    147          #define C_LazyWalkStepToStepUpperLimit_U8X      30      /**< Step-To-Step count upper limit for lazy walk */
+    148          #define C_WalkStepToStepLowerLimit_U8X          7       /**< Step-To-Step count lower limit for walk */
+    149          #define C_WalkStepToStepUpperLimit_U8X          17      /**< Step-To-Step count upper limit for walk */
+    150          #define C_JogStepToStepLowerLimit_U8X           7       /**< Step-To-Step count lower limit for Jog */
+    151          #define C_JogStepToStepUpperLimit_U8X           17      /**< Step-To-Step count upper limit for Jog */
+    152          
+    153          /* MODE DEFINITIONS */
+    154          
+    155          #define MODE_DETECTION                          0       /**< First 4 steps yet to be made */
+    156          #define MODE_COUNTING                           1       /**< Walking mode (made 4 steps) */
+    157          #define MODE_SLEEPING                           2       /**< Sleeping mode */
+    158          
+    159          #define M_Walk_U8X                              (char)0x01    /**< Mask Bit for Walk*/
+    160          #define M_SlowWalk_U8X                          (char)0x02    /**< Mask Bit for Slow Walk*/
+    161          #define M_Jog_U8X                               (char)0x04    /**< Mask Bit for Jog*/
+    162          
+    163          #define M_ModeDetection_U8X                     (char)0x01    /**< Mask Bit for Detection Mode*/
+    164          #define M_ModeCounting_U8X                      (char)0x02    /**< Mask Bit for Counting Mode*/
+    165          #define M_AlgoReset_U8X                         (char)0x04    /**< Mask Bit for Algo reset*/
+    166          
+    167          #define M_Qualified_U8X                         (char)0x08    /**< Mask Bit for Qualified Step*/
+    168          #define M_UnQualified_U8X                       (char)0x10    /**< Mask Bit for UnQualified Step*/
+    169          #define M_PositiveTrend_U8X                     (char)0x20    /**< Mask Bit for Positive Trend Change*/
+    170          #define M_NegativeTrend_U8X                     (char)0x40    /**< Mask Bit for Negative Trend Change*/
+    171          
+    172          #define M_DisableRobustness_U8X                 (char)0x80    /**< Mask Bit for Disable robustness feature*/
+    173          
+    174          /* MACROS DECIDING THE STEP NATURE */
+    175          
+    176          /**\ brief Macro Deciding Lazy walk step */
+    177          
+    178          #define IS_LAZY_WALK_STEP(resultDiff_i16) \
+    179                  ((resultDiff_i16 >= V_LazyWalkLowerLimit_U8R &&  \
+    180                    resultDiff_i16 <= LAZY_WALKING_UPPER_LIMIT) && \
+    181                  (V_SampleCountForCycle_U8R >= LAZY_WALKING_CYCLE_LOWER_LIMIT && \
+    182                   V_SampleCountForCycle_U8R <= LAZY_WALKING_CYCLE_UPPER_LIMIT))
+    183          
+    184          /**\ brief Macro deciding Walk step */
+    185          
+    186          #define IS_WALK_STEP(resultDiff_i16) \
+    187                  ((resultDiff_i16 >= WALKING_LOWER_LIMIT &&  \
+    188                    resultDiff_i16 <= WALKING_UPPER_LIMIT) && \
+    189                  (V_SampleCountForCycle_U8R >= WALKING_CYCLE_LOWER_LIMIT && \
+    190                   V_SampleCountForCycle_U8R <= WALKING_CYCLE_UPPER_LIMIT))
+    191          
+    192          /**\ brief Macro deciding Jog step */
+    193          
+    194          #define IS_JOG_STEP(resultDiff_i16) \
+    195                  ((resultDiff_i16 >= JOG_LOWER_LIMIT &&  \
+    196                    resultDiff_i16 <= JOG_UPPER_LIMIT) && \
+    197                  (V_SampleCountForCycle_U8R >= JOG_CYCLE_LOWER_LIMIT && \
+    198                   V_SampleCountForCycle_U8R <= JOG_CYCLE_UPPER_LIMIT))
+    199          
+    200          /* PEDOMETER OTHER CONSTANTS */
+    201          
+    202          #define C_FilterTaps_U8X                   (char)24     /**< Filter taps */
+    203          #define C_Q15ConversionFactor_U8X          (char)15     /**< Division Factor for Q15 */
+    204          #define C_Clear_U8X                        (char)0      /**< For clearing to 0 */
+    205          
+    206          #define C_CountZero_U8X                    (char)0      /**< For Counter purpose 0 */
+    207          #define C_CountOne_U8X                     (char)1      /**< For Counter purpose 1 */
+    208          
+    209          #define C_DetectionModeTimeOut_U8X         (char)70     /**< Detection Mode time out upper limit (2.8 seconds) */
+    210          #define C_CountingModeTimeOut_U8X          (char)100    /**< Counting Mode time out upper limit (4 seconds) */
+    211          #define C_ErrorCountLimit_U8X              (char)3//3   /**< Limit for Error count */
+    212          #define C_CorrectionCountLimit_U8X         (char)3      /**< Limit for Correction count */
+    213          #define C_InterStepCountLimit_U8X          (char)3      /**< Limit for Inter Step count (With Robustness) */
+    214          #define C_InterStepCountLimitNoRobustness  (char)3      /**< Limit for Inter Step count (Without Robustness) */
+    215          
+    216          #define C_RunLowerRange_U8X                (char)36>>V_DivideFactor_U8R /**< Run Activity Step Peak-To-Peak to Step-Interval Ratio */
+    217          #define C_WalkLowerRange_U8X               (char)4      /**< Walk Activity Step Peak-To-Peak to Step-Interval Ratio */
+    218          
+    219          #define C_ActivityFilterSize_U8X           (char)8      /**< Activity Filter Size */
+    220          #define C_RestTimeThreshold_U8R            (char)125    /**< Idle time Without any motion */
+    221          #define C_40ms_U8R                         (char)40     /**< Pedometer algorithm calling interval */
+    222          
+    223          /* ACTIVITY TYPE */
+    224          #define STATIONARY                         (char)0      /**< STATIONARY */
+    225          #define WALK                               (char)1      /**< WALK */
+    226          #define RUN                                (char)3      /**< RUN */
+    227          /* EasyCASE - */
+    228          /* SPEED and CADENCE LPF CONSTANTS */
+    229          #define C_SpeedCadenceLpfInitialCountLimit_U8R  (char) 20     /**< No of Initial counts for which LPF for Speed and Cadence is relaxed */
+    230          #define C_CADENCE_ALPHA_LPF                     (float)0.125  /**< Alpha for Cadence Low Pass Filter */
+    231          #define C_SPEED_ALPHA_LPF                       (float)0.125  /**< Alpha for Speed Low Pass Filter */
+    232          /* EasyCASE - */
+    233          #define C_Xaxis_U8X                        (char)0      /**< X_Axis */
+    234          #define C_Yaxis_U8X                        (char)1      /**< Y_Axis */
+    235          #define C_Zaxis_U8X                        (char)2      /**< Z_Axis */
+    236          #define C_CompositeAxis_U8X                (char)3      /**< Composite_Axis */
+    237          /* EasyCASE - */
+    238          #define C_InstP2PTimeBufSize_U8R           (char)10                 /**< Instantaneous Peak-To-Peak time buffer size */
+    239          #define C_InstCadenceFluatuationLimit_U8R  (char)3                  /**< Once FIFO is filled, Maximum allowed fluctuations in The P2P time */
+    240          #define C_COMPOSITE_AXIS_CADENCE100_CUTOFF_U16R (unsigned short)250 /**< Lower cadence limit above which activity is considered as RUN */
+    241          /* EasyCASE - */
+    242          #define C_CHIPID_BMA250E_U8R                     0xF9   /*Chip ID*/
+    243          
+    244          /* EasyCASE ) */
+    245          /* EasyCASE ( 222
+    246             ENUM Definitions */
+    247          /* EasyCASE ) */
+    248          /* EasyCASE ( 101281
+    249             Variable Definitions */
+    250          unsigned char    V_InterStepCount_U8R=0;       /**< Holds the steps counted while not in counting */
+    251          unsigned char    V_SampleCountForCycle_U8R=0;  /**< Holds the sample counts between trend changes */
+    252          unsigned char    V_Activity_U8R;               /**< Holds the pedometer activity */
+    253          unsigned char    V_DivideFactor_U8R;           /**< Holds the division factor for the threshold */
+    254          unsigned char    V_StatusFlags_U8R;            /**< Holds the Status Flags used */
+    255          static unsigned short V_StepCount_U16R;        /**< Holds the Total StepCount */
+    256          
+    257          static short  A_Raw_AccelC_S16R[C_FilterTaps_U8X];   /**< Holds the 24 input values of Composite-Axis to the filter */
+    258          static short  A_Raw_AccelX_S16R[C_FilterTaps_U8X];   /**< Holds the 24 input values of X-Axis to the filter */
+    259          static short  A_Raw_AccelY_S16R[C_FilterTaps_U8X];   /**< Holds the 24 input values of Y-Axis to the filter */
+    260          static short  A_Raw_AccelZ_S16R[C_FilterTaps_U8X];   /**< Holds the 24 input values of Z-Axis to the filter */
+    261          unsigned char V_LazyWalkLowerLimit_U8R =0;           /**< Holds the lazy walk lower limit threshold */
+    262          /* EasyCASE - */
+    263          U8 V_PreActivity_U8R = 0;                /**< Holds the previous activity type */
+    264          U8 V_ActivityDetected_U8R=0;             /**< Holds the current activity type */
+    265          U8 V_CHIPIDCHECK_U8R = 0;                                        /* Chip ID check*/
+    266          static U8 V_InterStepCountLimit_U8R = 0; /**< Holds the interstepcount limit (User selectable for robust and non-robust cases) */
+    267          /* EasyCASE - */
+    268          /* Holds the Filter coefficients for 0.24 in Q15 format */
+    269          /* EasyCASE - */
+    270          /* EasyCASE < */
+    271          /* OLD COEFFICIENTS: FIR LPF FILTER(Fc = xHz to Fs = yHz )*/
+    272          static const short gc_CompositeFilterCoeff[C_FilterTaps_U8X] =
+    273          {
+    274                  58, 134, 173, 45, -324, -802, -999, -422, 1192, 3614, 6078, 7637,
+    275                  7637, 6078, 3614, 1192, -422, -999, -802, -324, 45, 173, 134, 58
+    276          };
+    277          /* EasyCASE > */
+    278          /* EasyCASE - */
+    279          /* EasyCASE < */
+    280          /* NEW COEFFICIENTS: FIR LPF FILTER(Fc = 4Hz to Fs = 6Hz )*/
+    281          static const short gc_HighSpeedFilterCoeff[C_FilterTaps_U8X] =
+    282          {
+    283               290, 288, -353, -597, -26, 1110, 857, -1154, -2584, 10, 6498, 12235,
+    284               12235, 6498, 10, -2584, -1154, 857, 1110, -26, -597, -353, 288, 290
+    285          };
+    286          /* EasyCASE > */
+    287          /* EasyCASE - */
+    288          /* Variables Specific for Internal and External Buffers - Refer to PedoSupport.c */
+    289          U8 A_TempActivityBuffer_U8R[INTERNAL_FIFO_MAX_SIZE];       /**< Temporary instantaneous activity buffer */
+    290          U8 A_TempP2PCountBuffer_U8R[INTERNAL_FIFO_MAX_SIZE];       /**< Temporary instantaneous peak-to-peak time count buffer */
+    291          U8 A_TempS2SCountBuffer_U8R[INTERNAL_FIFO_MAX_SIZE];       /**< Temporary instantaneous step-to-step time count buffer */
+    292          U8 V_ActivityInstateneous_U8R = 0;                         /**< Instantaneous Activity */
+    293          static U8 V_AxisSelectFlag_U8R = C_AXIS_IS_COMPOSITE_U8X;  /**< Axis Selection flag (Single/Composite)? */
+    294          /* EasyCASE - */
+    295          ts_SingleAxis S_Param_Xaxis;  /**< Structure variable to hold X-axis acceleration features  */
+    296          ts_SingleAxis S_Param_Yaxis;  /**< Structure variable to hold Y-axis acceleration features  */
+    297          ts_SingleAxis S_Param_Zaxis;  /**< Structure variable to hold Z-axis acceleration features  */
+    298          ts_SingleAxis S_Param_Caxis;  /**< Structure variable to hold C-axis acceleration features  */
+    299          ts_LPF S_ObjCadence;          /**< Structure variable to hold low pass filter values for Cadence */
+    300          ts_LPF S_ObjSpeed;            /**< Structure variable to hold low pass filter values for Speed */
+    301          /* EasyCASE - */
+    302          U8  V_TempFIFOSize_U8R = 0;            /**< Temporary FIFO size */
+    303          U16 V_MovAvgStableCadenceX100_U16R=0;  /**< Step based stable cadence (Moving Averaged) */
+    304          U16 V_SingleAxisStableCadence_U16R;    /**< Stride based cadence for stable axis */
+    305          U16 V_CompositeAxis_StrideRatio_U16R;  /**< Stride Peak-to-Peak value to Stride Interval ratio for composite axis */
+    306          U16 V_CompositeAxis_CadenceX100_U16R;  /**< Cadence for Composite axis */
+    307          /* EasyCASE - */
+    308          F32 V_CurrentDist_F32R = 0.0;          /**< Current Activity Distance (in Meters) */
+    309          /* EasyCASE - */
+    310          ts_ExtraVar ExtraVar;  /**< ( Extra structure variables to be removed after analysis ) */
+    311          /* EasyCASE ) */
+    312          /* EasyCASE ( 223
+    313             Constant- and Table-Definitions in ROM/EEPROM */
+    314          /* EasyCASE ) */
+    315          /* EasyCASE ( 252
+    316             Functions Prototype Declaration */
+    317          static void  PEDO_TrendFinder( short, short* ); 
+    318          static short PEDO_GetAbsoluteShort( short );
+    319          static void  PEDO_Get_SingleAxisAccelFeatures( S16, ts_SingleAxis* );
+    320          static void  PEDO_Reset_SingleAxisAccelFeatures( ts_SingleAxis* );
+    321          static void  PEDO_Find_StableSingleAxis_StableCadenceX100( ts_SingleAxis*, ts_SingleAxis*, ts_SingleAxis*, ts_SingleAxis*, U8, U8, U8, U8*, U16*);
+    322          static void  PEDO_FindDominantAxisOrder( ts_SingleAxis*, ts_SingleAxis*, ts_SingleAxis*, U8, U8*,  U8*, U8* );
+    323          
+    324          extern void gpsapp_trace(char * fmt,...);
+    325          /* EasyCASE ) */
+    326          /* EasyCASE ) */
+    327          /* EasyCASE ( 70
+    328             API-Interface functions */
+    329          /* EasyCASE ( 101478
+    330             PEDO_GetStepCount */
+    331          /* EasyCASE F */
+    332          /*******************************************************************************
+    333           * Description: *//**\brief This API should be called to get Total no.of steps
+    334           * counted.
+    335           *
+    336           *  
+    337           *
+    338           *
+    339           *
+    340           *  \param
+    341           *   NONE
+    342           *
+    343           *
+    344           *  \return 
+    345           *   U16 V_StepCount_U16R --> Total no. of steps counted. 
+    346           *            
+    347           *
+    348           ******************************************************************************/
+    349          /* Scheduling: 
+    350           * 
+    351           *
+    352           *
+    353           * Usage guide:
+    354           *
+    355           *
+    356           * Remarks:
+    357           *
+    358           ******************************************************************************/
+    359          unsigned long PEDO_GetStepCount(void)
+    360             {
+    361            // gpsapp_trace("******gpsapp_trace***** = %d",V_StepCount_U16R);
+    362             return (V_StepCount_U16R );
+    363             }
+    364          /* EasyCASE ) */
+    365          /* EasyCASE ( 101486
+    366             PEDO_StopDetection */
+    367          /* EasyCASE F */
+    368          /*******************************************************************************
+    369           * Description: *//**\brief This function will put the Pedometer Algorithm into 
+    370           * Sleep mode.
+    371           *  
+    372           *
+    373           *
+    374           *
+    375           *  \param
+    376           *   NONE
+    377           *
+    378           *
+    379           *  \return 
+    380           *   NONE 
+    381           *            
+    382           *
+    383           ******************************************************************************/
+    384          /* Scheduling: 
+    385           * 
+    386           *
+    387           * Usage guide:
+    388           *
+    389           *
+    390           * Remarks:
+    391           *
+    392           ******************************************************************************/
+    393          void PEDO_StopDetection(void)
+    394             {
+    395             /* Reset all flags except Robustness Flag */    
+    396             V_StatusFlags_U8R = (V_StatusFlags_U8R & M_DisableRobustness_U8X);
+    397             }
+    398          /* EasyCASE ) */
+    399          /* EasyCASE ( 101488
+    400             PEDO_StartDetection */
+    401          /* EasyCASE F */
+    402          /*******************************************************************************
+    403           * Description: *//**\brief This API should be used to start the Pedometer Algorithm
+    404           * if pedometer is in sleep mode. If Pedometer Algorithm is running already, Call this
+    405           * API to get Pedometer algorthm restarted. Step count will be reset. By default the normal
+    406           * human activity detection is enabled.
+    407           *
+    408           *  
+    409           *
+    410           *
+    411           *
+    412           *  \param
+    413           *  NONE
+    414           *
+    415           *
+    416           *  \return 
+    417           *  NONE
+    418           *            
+    419           *
+    420           ******************************************************************************/
+    421          /* Scheduling: 
+    422           * 
+    423           *
+    424           *
+    425           * Usage guide:
+    426           *
+    427           *
+    428           * Remarks:
+    429           *
+    430           ******************************************************************************/
+    431          void PEDO_StartDetection(void)
+    432             {
+    433             /* This function will set the mode as detection mode. If this function is called
+    434                in between the program this function will reset the step count value. */
+    435             /* EasyCASE - */
+    436             /* All flags except robustness cleared */
+    437             V_StatusFlags_U8R = (V_StatusFlags_U8R & M_DisableRobustness_U8X);
+    438             /* Set the Previous data count as 1 */
+    439             V_StatusFlags_U8R |= M_AlgoReset_U8X;;
+    440             /* Set the mode as Detection Mode */
+    441             V_StatusFlags_U8R |= M_ModeDetection_U8X;;
+    442             }
+    443          /* EasyCASE ) */
+    444          /* EasyCASE ( 101490
+    445             PEDO_ResetStepCount */
+    446          /* EasyCASE F */
+    447          /*******************************************************************************
+    448           * Description: *//**\brief This API should be used to reset the step count to zero.
+    449           * Pedometer Algorithm mode is not affected by this function. 
+    450           *  
+    451           *
+    452           *
+    453           *
+    454           *  \param
+    455           *   NONE
+    456           *   
+    457           *
+    458           *
+    459           *  \return 
+    460           *   NONE
+    461           *            
+    462           *
+    463           ******************************************************************************/
+    464          /* Scheduling: 
+    465           * 
+    466           *
+    467           *
+    468           * Usage guide:
+    469           *
+    470           *
+    471           * Remarks:
+    472           *
+    473           ******************************************************************************/
+    474          void PEDO_ResetStepCount(void)
+    475             {
+    476             /* Reset the number of steps counted to 0 */
+    477             V_StepCount_U16R = C_Clear_U8X;
+    478             /* Reset all flags except Robustness flag */
+    479             V_StatusFlags_U8R = (V_StatusFlags_U8R & M_DisableRobustness_U8X);
+    480             /* Set the previous data as 1 */
+    481             V_StatusFlags_U8R|=(M_AlgoReset_U8X|M_ModeDetection_U8X);
+    482             /* Reset activity */
+    483             V_Activity_U8R=C_Clear_U8X;
+    484             }
+    485          /* EasyCASE ) */
+    486          /* EasyCASE ( 101492
+    487             PEDO_GetActivity */
+    488          /* EasyCASE F */
+    489          /*******************************************************************************
+    490           * Description: *//**\brief This API should be called to get the User's Activity
+    491           * Type (Nature of the Step) i.e. STAITIONARY(0x00), WALK(0x01)or RUN(0x03).
+    492           *
+    493           *  
+    494           *
+    495           *
+    496           *
+    497           *  \param
+    498           *  NONE
+    499           *
+    500           *
+    501           *  \return 
+    502           *  U8 --> User Activity Type 
+    503           *            
+    504           *
+    505           ******************************************************************************/
+    506          /* Scheduling: 
+    507           * 
+    508           *
+    509           *
+    510           * Usage guide:
+    511           *
+    512           *
+    513           * Remarks:
+    514           *
+    515           ******************************************************************************/
+    516          unsigned char PEDO_GetActivity(void)
+    517             {
+    518             /*Activities are identified based on the acceleration pattern features */
+    519             return (V_ActivityDetected_U8R);
+    520             }
+    521          /* EasyCASE ) */
+    522          /* EasyCASE ( 101496
+    523             PEDO_InitAlgo */
+    524          /* EasyCASE F */
+    525          /*******************************************************************************
+    526           * Description: *//**\brief This API should be used to initialze the variables 
+    527           * that are used in the Pedometer Algorithm. It should be called device Power On
+    528           * to initialise the Pedometer Algorithm.
+    529           *
+    530           *
+    531           *
+    532           *
+    533           *  \param
+    534           *   U8 v_GRange_u8r :  Parameter used to set the division factor for threshold
+    535           *                      depending on the Accelerometer range.
+    536           *                     (Use 0-->2G;  1-->4G;  2-->8G acceleration range of the sensor).  
+    537           *
+    538           *  \return 
+    539           *   NONE
+    540           *            
+    541           *
+    542           ******************************************************************************/
+    543          /* Scheduling: 
+    544           * Call the function after giving a delay (10msec) after power on of the device.
+    545           *
+    546           *
+    547           * Usage guide:
+    548           *
+    549           *
+    550           * Remarks:
+    551           *
+    552           ******************************************************************************/
+    553          void PEDO_InitAlgo(unsigned char v_GRange_u8r)//初始化算法
+    554             {
+    555             //unsigned char v_addr_u8r=0;
+    556             //unsigned char v_ChipID_u8r=0;
+    557             /* EasyCASE - */
+    558             /*Read Chip id from address 00*/
+    559             
+    560             //bma255_read_reg(v_addr_u8r, &v_ChipID_u8r,1);
+    561             
+    562             //if (/*Check whether chip id is of BMA250(0xFB)*/
+    563              //   v_ChipID_u8r == C_CHIPID_BMA250E_U8R)
+    564                if(1)
+    565                {
+    566                /* Initialze the variables that are being used in the Pedometer Algorithm. */
+    567                /* EasyCASE - */
+    568                V_Activity_U8R = C_Clear_U8X;  /* Clear User Activity Type */
+    569                
+    570                /* Clear Speed and Cadence Filter Variables */
+    571                S_ObjCadence.V_FilterValue_F32R = 0; 
+    572                S_ObjSpeed.V_FilterValue_F32R = 0;
+    573                
+    574                /* Initialise the LPF_ALPHA for Speed and Cadence Filter Variables */
+    575                S_ObjCadence.V_ALPHA_F32R = C_CADENCE_ALPHA_LPF;
+    576                S_ObjSpeed.V_ALPHA_F32R = C_SPEED_ALPHA_LPF;
+    577                
+    578                /* Reset the step count */
+    579                V_StepCount_U16R = C_Clear_U8X;
+    580                
+    581                /* Clear the Status Flag and Set the MODE as Detection to startc algo afresh */
+    582                V_StatusFlags_U8R = C_Clear_U8X;
+    583                V_StatusFlags_U8R |= (M_ModeDetection_U8X|M_AlgoReset_U8X);
+    584                V_DivideFactor_U8R=v_GRange_u8r;
+    585                
+    586                /*Default lower limit for lazy walk is limit with robustness enabled */
+    587                V_LazyWalkLowerLimit_U8R=LAZY_WALKING_LOWER_LIMIT_Robust;
+    588                
+    589                /* Enable Robustness feature */
+    590                PEDO_EnableRobustness();
+    591                
+    592                /* Set InterStepCount limit */
+    593                PEDO_SetInterStepCount(5);
+    594                /*Chip id validation variable made 0.Thus algo will run*/
+    595                V_CHIPIDCHECK_U8R=1;
+    596                }
+    597             else
+    598                {
+    599                /*Chip id is wrong.SO no need to allow algorithm to run.
+    600                Making V_StatusFlags_U8R=0 will make algorithm not to run*/
+    601                V_StatusFlags_U8R = C_Clear_U8X;
+    602                /*Chip id validation variable made 1.Thus algo will not run*/
+    603                V_CHIPIDCHECK_U8R=0;
+    604                }
+    605             }
+    606          /* EasyCASE ) */
+    607          /* EasyCASE ( 101497
+    608             PEDO_Enable_Robustness */
+    609          /* EasyCASE F */
+    610          /*******************************************************************************
+    611           * Description: *//**\brief This API should be called to start the Pedometer
+    612           * Algorithm with robustness feature enabled. By default robustness feature
+    613           * will be enabled in the pedometer algorithm.If any time the robustness 
+    614           * feature is disabled then this API needs to be called again to enable the
+    615           * robustness feature. 
+    616           *  
+    617           *
+    618           *
+    619           *
+    620           *  \param
+    621           *   NONE
+    622           *
+    623           *
+    624           *  \return 
+    625           *   NONE 
+    626           *            
+    627           *
+    628           ******************************************************************************/
+    629          /* Scheduling: 
+    630           * 
+    631           *
+    632           *
+    633           * Usage guide:
+    634           *
+    635           *
+    636           * Remarks:
+    637           *
+    638           ******************************************************************************/
+    639          void PEDO_EnableRobustness(void)//鲁棒性使能
+    640             {
+    641             /* Enable Robustness feature of the Pedometer */
+    642             V_StatusFlags_U8R&=~(M_DisableRobustness_U8X);
+    643             /*Lower threshold for robust mode*/
+    644             V_LazyWalkLowerLimit_U8R=LAZY_WALKING_LOWER_LIMIT_Robust;
+    645             }
+    646          /* EasyCASE ) */
+    647          /* EasyCASE ( 101498
+    648             PEDO_SetInterStepCount */
+    649          /* EasyCASE F */
+    650          /*******************************************************************************
+    651           * Description: *//**\brief This API should be called to set/change the inter step
+    652           * count limit depending on the robust/non-robust pedometer applications.
+    653           *
+    654           *  
+    655           *
+    656           *
+    657           *
+    658           *  \param
+    659           *   U8 v_InterStepCountLimit_u8r --> Inter-Step count limit for pedometer algorithm.
+    660           *  
+    661           *
+    662           *
+    663           *  \return 
+    664           *   NONE
+    665           *            
+    666           *
+    667           ******************************************************************************/
+    668          /* Scheduling: 
+    669           * 
+    670           *
+    671           *
+    672           * Usage guide:
+    673           *
+    674           *
+    675           * Remarks:
+    676           *
+    677           ******************************************************************************/
+    678          void PEDO_SetInterStepCount(U8 v_InterStepCountLimit_u8r )
+    679             {
+    680             V_InterStepCountLimit_U8R = v_InterStepCountLimit_u8r;
+    681             }
+    682          /* EasyCASE ) */
+    683          /* EasyCASE ( 101499
+    684             PEDO_Disable_Robustness */
+    685          /* EasyCASE F */
+    686          /*******************************************************************************
+    687           * Description: *//**\brief This API should be called to start the Pedometer
+    688           * Algorithm with robustness feature disabled. By default robustness feature 
+    689           * will be enabled in the algorithm. If any time the robustness feature needs
+    690           * to be disabled then this API has to be called. 
+    691           *
+    692           *
+    693           *
+    694           * \param
+    695           * NONE  
+    696           *   
+    697           *
+    698           *
+    699           * \return 
+    700           * NONE    
+    701           *            
+    702           *
+    703           ******************************************************************************/
+    704          /* Scheduling: 
+    705           * 
+    706           *
+    707           *
+    708           * Usage guide:
+    709           *
+    710           *
+    711           * Remarks:
+    712           *
+    713           ******************************************************************************/
+    714          void PEDO_DisableRobustness(void)
+    715             {
+    716             /* Disable robustness feature for Pedometer Algorithm */
+    717             V_StatusFlags_U8R|=(M_DisableRobustness_U8X);
+    718              /*Set Lasy walk lower thresold for non_robust mode*/
+    719             V_LazyWalkLowerLimit_U8R=LAZY_WALKING_LOWER_LIMIT_NoRobust;
+    720             }
+    721          /* EasyCASE ) */
+    722          /* EasyCASE ( 101500
+    723             PEDO_ResetAlgo */
+    724          /* EasyCASE F */
+    725          /*******************************************************************************
+    726           * Description: *//**\brief This API should be called to reset the Pedometer Algorithm.
+    727           * It will clear/reset the variables used into Pedometer Algorithm.
+    728           *
+    729           *  
+    730           *
+    731           *
+    732           *
+    733           *  \param
+    734           *  NONE 
+    735           *   
+    736           *
+    737           *
+    738           *  \return 
+    739           *  NONE
+    740           *            
+    741           *
+    742           ******************************************************************************/
+    743          /* Scheduling: 
+    744           * *NONE
+    745           *
+    746           *
+    747           * Usage guide:
+    748           *
+    749           *
+    750           * Remarks:
+    751           *
+    752           ******************************************************************************/
+    753          void PEDO_ResetAlgo(void)
+    754             {
+    755             V_PreActivity_U8R = 0;  /* Clear the Previous activity */
+    756             
+    757             S_ObjCadence.V_FilterValue_F32R = 0; /* Clear the LPF filtered value for Cadence */
+    758             S_ObjSpeed.V_FilterValue_F32R = 0; /* Clear the LPF filtered value for Speed */
+    759             
+    760             S_ObjCadence.V_ALPHA_F32R = C_CADENCE_ALPHA_LPF; /* Set the LPF_ALPHA value for Cadence */
+    761             S_ObjSpeed.V_ALPHA_F32R = C_SPEED_ALPHA_LPF; /* Set the LPF_ALPHA value for Speed */
+    762             
+    763             PEDO_ResetStepCount(); /* Reset the Step Count */
+    764             
+    765             /* Reset single axis parameters for the X, Y, Z and composite axis. */
+    766             PEDO_Reset_SingleAxisAccelFeatures( &S_Param_Xaxis );
+    767             PEDO_Reset_SingleAxisAccelFeatures( &S_Param_Yaxis );
+    768             PEDO_Reset_SingleAxisAccelFeatures( &S_Param_Zaxis );
+    769             PEDO_Reset_SingleAxisAccelFeatures( &S_Param_Caxis );
+    770             }
+    771          /* EasyCASE ) */
+    772          /* EasyCASE ( 101502
+    773             PEDO_GetBandwidthSwitchInfo */
+    774          /* EasyCASE F */
+    775          /*******************************************************************************
+    776           * Description: *//**\brief This API should be called to get the information of
+    777           * Axis_Select Flag to decide whether to use 10Hz or 300Hz Bandwidth of accelerometer
+    778           * for pedometer algorithm.
+    779           * a)-->IF(Activity==WALK) ==> (V_AxisSelectFlag_U8R = COMPOSITE AXIS) ==> BW=300Hz.
+    780           * b)-->IF(Activity==RUN) ==> (V_AxisSelectFlag_U8R = SINGLE AXIS) ==> BW=10Hz.
+    781           *
+    782           *  
+    783           *
+    784           *
+    785           *
+    786           *  \param
+    787           *   NONE
+    788           *
+    789           *
+    790           *  \return 
+    791           *   U8 V_AxisSelectFlag_U8R -->  Selected Axis for Step Counting (Single or Composite Axis ?)
+    792           *      based on the type of the Activity.
+    793           *            
+    794           *
+    795           ******************************************************************************/
+    796          /* Scheduling: 
+    797           * 
+    798           *
+    799           *
+    800           * Usage guide:
+    801           *
+    802           *
+    803           * Remarks:
+    804           *
+    805           ******************************************************************************/
+    806          U8 PEDO_GetBandwidthSwitchInfo(void)
+    807             {
+    808             return V_AxisSelectFlag_U8R;
+    809             }
+    810          /* EasyCASE ) */
+    811          /* EasyCASE ( 101504
+    812             PEDO_ProcessAccelarationData */
+    813          /* EasyCASE F */
+    814          /*******************************************************************************
+    815           * Description: *//**\brief This API is the Heart of the Pedometer Algorothm.
+    816           * It should be called to process the acceleration data along X.Y and Z axis
+    817           *  to calculate the Composite Acceleration value, Total No. of Steps, Step nature
+    818           * (STATIONARY/WALK/RUN) etc.
+    819           *
+    820           *  
+    821           *
+    822           *
+    823           *
+    824           *  \param
+    825           *   short v_RawAccelX_s16r --> Acceleration Value along X-axis in LSBs
+    826           *   short v_RawAccelY_s16r --> Acceleration Value along Y-axis in LSBs
+    827           *   short v_RawAccelZ_s16r --> Acceleration Value along Z-axis in LSBs
+    828           *
+    829           *
+    830           *  \return 
+    831           *   F32 --> Value of the Composite Aceleration (|x|+|y|+|z|). 
+    832           *            
+    833           *
+    834           ******************************************************************************/
+    835          /* Scheduling: 
+    836           * Call this API after initialising the pedometer algorithm by calling API "PEDO_InitAlgo" atleast once.
+    837           *
+    838           *
+    839           * Usage guide:
+    840           *
+    841           *
+    842           * Remarks:
+    843           *
+    844           ******************************************************************************/
+    845          short PEDO_ProcessAccelarationData(short v_RawAccelX_s16r, short v_RawAccelY_s16r, short v_RawAccelZ_s16r)//过程加速数据
+    846             {
+    847             /* EasyCASE ( 101532
+    848                Variable Declerations */
+    849             signed char  v_Index_u8r = 0; /* Local Index variable */
+    850             static unsigned char  v_CorrectionCount_u8r=0; /* Correction Count */
+    851             static unsigned char  v_ErrorCount_u8r=0; /* Error Count between two steps */
+    852             /* EasyCASE - */
+    853             static unsigned char   v_CountStepToStep_u8r=0; /* Time count b/w last and current step */
+    854             static unsigned char   v_CountStepToStepPrev1_u8r=0; /* Time count b/w second last and last step */
+    855             static unsigned char   v_CountStepToStepPrev2_u8r=0; /* Time count b/w third last and second last step */
+    856             static unsigned char   v_ModeTimeoutCount_u8r=0; /* Detection/Counting Mode timeout counter */
+    857             /* EasyCASE - */
+    858             short  v_RawAccelC_s16r=0; /* Raw Composite Acceleration value */
+    859             short  v_FiltAccelTrendAxis_s16r=0;  /* Filtered acceleration value for stable single axis */
+    860             short  v_FiltAccel4Axis_s16r[4]; /* Filtered acceleration value for all 4 axis (X, Y, Z and Composite) */
+    861             
+    862             /* Initialise the filter result value to 0 */
+    863             long  v_FilterResultAxisX_u32r=C_Clear_U8X; /* Filtered X-Axis Accel Value */
+    864             long  v_FilterResultAxisY_u32r=C_Clear_U8X; /* Filtered Y-Axis Accel Value */
+    865             long  v_FilterResultAxisZ_u32r=C_Clear_U8X; /* Filtered Z-Axis Accel Value */
+    866             long  v_FilterResultAxisC_u32r=C_Clear_U8X; /* Filtered Composite-Axis Accel Value */
+    867             static char v_PreStatusFlags_u8r=0; /* Previous status */
+    868             /* EasyCASE - */
+    869             static short v_NegTrendAccelVal_s16r=0x7FFF; /* Acceleration value at Negetive Trend */
+    870             /* Previous acceleration value difference from negetive to positive trends */
+    871             static short v_PrevPosNegTrendAccelValDiff_s16r=0;
+    872             /* EasyCASE - */
+    873             /* EasyCASE < */
+    874             unsigned short v_AvgActivityDetectionRatio_u16r=0; /* Average step peak-to-peak value versus step-interval ratio */
+    875             static unsigned short a_AvgActivityDetectionRatioBuf_u16r[C_ActivityFilterSize_U8X]={0}; /* step peak-to-peak value versus step-interval ratio buffer */
+    876             static unsigned char v_TrendDominantAxis_u8r=C_CompositeAxis_U8X; /* Trend dominant axis out of 4 axis (X, Y, Z and Composite ) */
+    877             /* EasyCASE > */
+    878             /* EasyCASE - */
+    879             /* Variables for the single axis accel features */
+    880             static unsigned char v_XaxisStrideDetectedFlag_u8r=0; /* X-axis stride detection flag */
+    881             static unsigned char v_YaxisStrideDetectedFlag_u8r=0; /* Y-axis stride detection flag */
+    882             static unsigned char v_ZaxisStrideDetectedFlag_u8r=0; /* Z-axis stride detection flag */
+    883             static unsigned char v_CaxisStrideDetectedFlag_u8r=0; /* Composite-axis stride detection flag */
+    884             
+    885             unsigned char v_IstDomAxis_u8r=0; /* First dominant axis */
+    886             unsigned char v_IIndDomAxis_u8r=0; /* Second dominant axis */
+    887             unsigned char v_IIIrdDomAxis_u8r=0; /* Third dominant axis */
+    888             unsigned char v_Activity_u8r=0; /* User activity */
+    889             static   char v_PreviousActivity_u8r=0; /* Previous Activity */
+    890             unsigned char v_SingleStableAxis_u8r = C_CompositeAxis_U8X; /* Stable axis out of 4 axis ( X, Y, Z and Composite ) */
+    891             unsigned long v_TempU32_u32r=0; /* Temp unsigned int variable */
+    892             /* EasyCASE ) */
+    893             /* EasyCASE ( 101533
+    894                Mode is sleeping? */
+    895             /* Check whether the mode is sleeping mode */
+    896             //if ((V_StatusFlags_U8R & (M_ModeDetection_U8X|M_ModeCounting_U8X))
+    897             //    && (V_CHIPIDCHECK_U8R==1))
+    898             //   {
+    899             //   }
+    900             //else
+    901             //   {
+    902             //   return 0;
+    903             //   }
+    904             /* EasyCASE ) */
+    905             /* EasyCASE ( 101534
+    906                Reset Previous data */
+    907              //  gpsapp_trace("V_StatusFlags_U8R = %d v_PreStatusFlags_u8r = %d",V_StatusFlags_U8R,v_PreStatusFlags_u8r);
+    908             if (V_StatusFlags_U8R & M_AlgoReset_U8X)
+    909                {
+    910                /* Set the reset the previous data as 0 */
+    911                V_StatusFlags_U8R &= ~M_AlgoReset_U8X;
+    912                /*Holds the previous activity type*/
+    913                v_PreviousActivity_u8r=C_Clear_U8X;
+    914                
+    915                /* Holds the steps counted while not in counting */
+    916                V_InterStepCount_U8R=C_Clear_U8X;
+    917                /* 0 if there is no correction. correction value if there needs to be a correction */
+    918                v_CorrectionCount_u8r=C_Clear_U8X;
+    919                /*Holds error count between 2 steps*/
+    920                v_ErrorCount_u8r=C_Clear_U8X;
+    921                /*Holds the count between two consecutive counts*/
+    922                v_ModeTimeoutCount_u8r=C_Clear_U8X;
+    923                /* Holds the sample counts between trend changes */
+    924                V_SampleCountForCycle_U8R=C_Clear_U8X;
+    925                /* Holds the time count between last & this step */
+    926                v_CountStepToStep_u8r=C_Clear_U8X;
+    927                /* Holds the time count between second last & last step */
+    928                v_CountStepToStepPrev1_u8r=C_Clear_U8X;
+    929                /* Holds the time count between third last & second last step */
+    930                v_CountStepToStepPrev2_u8r=C_Clear_U8X;
+    931                /*Initialise interstep count*/
+    932                V_InterStepCountLimit_U8R = C_InterStepCountLimit_U8X;
+    933                
+    934                /* Holds the composite high for the step cycle */
+    935                v_NegTrendAccelVal_s16r=0x7FFF;
+    936                /*Holds prev Result Diff*/
+    937                v_PrevPosNegTrendAccelValDiff_s16r=C_Clear_U8X;
+    938                /*The variable holding filter result are cleared*/
+    939                v_FilterResultAxisC_u32r=C_Clear_U8X;
+    940                
+    941                /* Clear Internal FIFO buffer data size counter */
+    942                ResetInternalFIFO();
+    943                /* Clear External FIFO buffer data size counter */
+    944                ResetExternalFIFO();
+    945                /* EasyCASE - */
+    946                /* Clear all axis accel buffers */
+    947                for (v_Index_u8r=0;v_Index_u8r<C_FilterTaps_U8X;v_Index_u8r++)
+    948                   {
+    949                   A_Raw_AccelX_S16R[v_Index_u8r] = C_Clear_U8X;
+    950                   A_Raw_AccelY_S16R[v_Index_u8r] = C_Clear_U8X;
+    951                   A_Raw_AccelZ_S16R[v_Index_u8r] = C_Clear_U8X;
+    952                   A_Raw_AccelC_S16R[v_Index_u8r] = C_Clear_U8X;
+    953                   }
+    954                /* Clear activity detection ratio buffer */
+    955                for (v_Index_u8r=(C_ActivityFilterSize_U8X-1);v_Index_u8r>=C_CountZero_U8X;v_Index_u8r--)
+    956                   {
+    957                   a_AvgActivityDetectionRatioBuf_u16r[v_Index_u8r]=0;
+    958                   }
+    959                V_ActivityDetected_U8R = (U8) STATIONARY; /* Default activity is Rest */
+    960                v_TrendDominantAxis_u8r = C_CompositeAxis_U8X; /* Default trend dominating axis is Composite */
+    961                V_AxisSelectFlag_U8R = C_AXIS_IS_COMPOSITE_U8X; /* Default axis selection is "AxisIsComposite" */
+    962                }
+    963             /* EasyCASE ) */
+    964             /* EasyCASE ( 101535
+    965                Check whether any change in Robstness feature? */
+    966             if (/*Check whether robustness feature status changed*/
+    967                 ((V_StatusFlags_U8R & M_DisableRobustness_U8X)!=
+    968                  (v_PreStatusFlags_u8r & M_DisableRobustness_U8X)))
+    969                {
+    970                /*Robustness feature got changed So Clear Temporary counts */
+    971                v_CorrectionCount_u8r=0;
+    972                V_InterStepCount_U8R=0;
+    973                V_StatusFlags_U8R &=~(M_Qualified_U8X|M_UnQualified_U8X);
+    974                v_ModeTimeoutCount_u8r = 0;
+    975                V_StatusFlags_U8R |=M_ModeDetection_U8X;
+    976                V_StatusFlags_U8R &=~M_ModeCounting_U8X;
+    977                ResetInternalFIFO(); /* Clear Internal FIFO buffer data size variable */
+    978                }
+    979             /* EasyCASE ) */
+    980             /* EasyCASE ( 101536
+    981                Count Updation */
+    982             V_SampleCountForCycle_U8R++; /* Increment the count for cycle */
+    983             v_CountStepToStep_u8r++;     /* Increment the step to step count */
+    984             v_ModeTimeoutCount_u8r++;    /* Increment Count Mode Elapse Timer*/
+    985             /* EasyCASE ) */
+    986             /* EasyCASE ( 101537
+    987                Find Trend Properties */
+    988             /* EasyCASE ( 101538
+    989                Calculate the Composite Acceleration */
+    990             v_RawAccelC_s16r = PEDO_GetAbsoluteShort(v_RawAccelX_s16r)+ PEDO_GetAbsoluteShort(v_RawAccelY_s16r) + PEDO_GetAbsoluteShort(v_RawAccelZ_s16r);
+    991             /* EasyCASE ) */
+    992             /* EasyCASE ( 101539
+    993                Calculate the FIR-LPF Filtered Acceleration Values */
+    994             /* shift the acceleration values into respective FIFOs for X, Y, Z and Composite axis  */
+    995             for (v_Index_u8r=C_CountZero_U8X; v_Index_u8r<(C_FilterTaps_U8X-1); v_Index_u8r++)
+    996                {
+    997                A_Raw_AccelX_S16R[C_FilterTaps_U8X-v_Index_u8r-1] = A_Raw_AccelX_S16R[C_FilterTaps_U8X-v_Index_u8r-2];
+    998                A_Raw_AccelY_S16R[C_FilterTaps_U8X-v_Index_u8r-1] = A_Raw_AccelY_S16R[C_FilterTaps_U8X-v_Index_u8r-2];
+    999                A_Raw_AccelZ_S16R[C_FilterTaps_U8X-v_Index_u8r-1] = A_Raw_AccelZ_S16R[C_FilterTaps_U8X-v_Index_u8r-2];
+   1000                A_Raw_AccelC_S16R[C_FilterTaps_U8X-v_Index_u8r-1] = A_Raw_AccelC_S16R[C_FilterTaps_U8X-v_Index_u8r-2];
+   1001                }
+   1002             A_Raw_AccelX_S16R[C_CountZero_U8X] = v_RawAccelX_s16r;
+   1003             A_Raw_AccelY_S16R[C_CountZero_U8X] = v_RawAccelY_s16r;
+   1004             A_Raw_AccelZ_S16R[C_CountZero_U8X] = v_RawAccelZ_s16r;
+   1005             A_Raw_AccelC_S16R[C_CountZero_U8X] = v_RawAccelC_s16r;
+   1006             /* EasyCASE - */
+   1007             /* Clear all the variables holding filtered acceleration value for X, Y, Z and Composite axis */
+   1008             /* EasyCASE - */
+   1009             v_FilterResultAxisX_u32r=C_Clear_U8X;
+   1010             v_FilterResultAxisY_u32r=C_Clear_U8X;
+   1011             v_FilterResultAxisZ_u32r=C_Clear_U8X;
+   1012             v_FilterResultAxisC_u32r=C_Clear_U8X;
+   1013             /* EasyCASE - */
+   1014             /* Calculate the FIR LPF filtered values for X, Y, Z and Composite axis */
+   1015             for (v_Index_u8r=C_CountZero_U8X;v_Index_u8r<C_FilterTaps_U8X;v_Index_u8r++)
+   1016                {
+   1017                v_FilterResultAxisX_u32r = v_FilterResultAxisX_u32r + 
+   1018                (long)((long)A_Raw_AccelX_S16R[(C_FilterTaps_U8X-C_CountOne_U8X)-v_Index_u8r]
+   1019                *(long)gc_HighSpeedFilterCoeff[v_Index_u8r]);
+   1020                /* EasyCASE - */
+   1021                v_FilterResultAxisY_u32r = v_FilterResultAxisY_u32r + 
+   1022                (long)((long)A_Raw_AccelY_S16R[(C_FilterTaps_U8X-C_CountOne_U8X)-v_Index_u8r]
+   1023                *(long)gc_HighSpeedFilterCoeff[v_Index_u8r]);
+   1024                /* EasyCASE - */
+   1025                v_FilterResultAxisZ_u32r = v_FilterResultAxisZ_u32r + 
+   1026                (long)((long)A_Raw_AccelZ_S16R[(C_FilterTaps_U8X-C_CountOne_U8X)-v_Index_u8r]
+   1027                *(long)gc_HighSpeedFilterCoeff[v_Index_u8r]);
+   1028                /* EasyCASE - */
+   1029                v_FilterResultAxisC_u32r = v_FilterResultAxisC_u32r +
+   1030                 (long)((long)A_Raw_AccelC_S16R[(C_FilterTaps_U8X-C_CountOne_U8X)-v_Index_u8r]
+   1031                *(long)gc_CompositeFilterCoeff[v_Index_u8r]);
+   1032                }
+   1033             /* Divide by 32768 to compensate Q15 format multiplication.*/
+   1034             /* EasyCASE - */
+   1035             v_FiltAccel4Axis_s16r[C_Xaxis_U8X] = (short)(v_FilterResultAxisX_u32r>>C_Q15ConversionFactor_U8X);
+   1036             v_FiltAccel4Axis_s16r[C_Yaxis_U8X] = (short)(v_FilterResultAxisY_u32r>>C_Q15ConversionFactor_U8X);
+   1037             v_FiltAccel4Axis_s16r[C_Zaxis_U8X] = (short)(v_FilterResultAxisZ_u32r>>C_Q15ConversionFactor_U8X);
+   1038             v_FiltAccel4Axis_s16r[C_CompositeAxis_U8X] = (short)(v_FilterResultAxisC_u32r>>C_Q15ConversionFactor_U8X);
+   1039             /* EasyCASE ) */
+   1040             /* EasyCASE ( 101540
+   1041                Find Stable Single Axis ( X, Y, Z or Composite Axis ) */
+   1042             /* Find all the axis (X, Y, Z and Composite Axis) properties */ 
+   1043             PEDO_Get_SingleAxisAccelFeatures( v_FiltAccel4Axis_s16r[C_Xaxis_U8X], &S_Param_Xaxis);
+   1044             PEDO_Get_SingleAxisAccelFeatures( v_FiltAccel4Axis_s16r[C_Yaxis_U8X], &S_Param_Yaxis);
+   1045             PEDO_Get_SingleAxisAccelFeatures( v_FiltAccel4Axis_s16r[C_Zaxis_U8X], &S_Param_Zaxis);
+   1046             PEDO_Get_SingleAxisAccelFeatures( v_FiltAccel4Axis_s16r[C_CompositeAxis_U8X], &S_Param_Caxis);
+   1047             /* EasyCASE - */
+   1048             /* Get the PedoActivity --> STATIONARY, WALK or RUN */ 
+   1049             v_Activity_u8r = PEDO_GetActivity();
+   1050             /* EasyCASE - */
+   1051             /* EasyCASE < */
+   1052             /* Check for X, Y, Z and Composite Axis if any stride pattern got detected?? */ 
+   1053              if (S_Param_Xaxis.V_ValidStridePatternOccuredFlag_U8X==1)
+   1054                      v_XaxisStrideDetectedFlag_u8r = 1; /* For X-axis Stride Pattern got detected */
+   1055              
+   1056              if (S_Param_Yaxis.V_ValidStridePatternOccuredFlag_U8X==1)
+   1057                      v_YaxisStrideDetectedFlag_u8r = 1; /* For Y-axis Stride Pattern got detected */
+   1058              
+   1059              if (S_Param_Zaxis.V_ValidStridePatternOccuredFlag_U8X==1)
+   1060                      v_ZaxisStrideDetectedFlag_u8r = 1; /* For Z-axis Stride Pattern got detected */
+   1061              
+   1062              if (S_Param_Caxis.V_ValidStridePatternOccuredFlag_U8X==1)
+   1063                      v_CaxisStrideDetectedFlag_u8r = 1; /* For Composite-axis Stride Pattern got detected */
+   1064              
+   1065              /* Check atleast for 2 out of 3 axis whether stride pattern got detected or not ?? */
+   1066              if( ((v_XaxisStrideDetectedFlag_u8r==1)&&(v_YaxisStrideDetectedFlag_u8r==1))||
+   1067                  ((v_YaxisStrideDetectedFlag_u8r==1)&&(v_ZaxisStrideDetectedFlag_u8r==1))||
+   1068                  ((v_ZaxisStrideDetectedFlag_u8r==1)&&(v_XaxisStrideDetectedFlag_u8r==1))
+   1069                )
+   1070              {                                
+   1071                    PEDO_FindDominantAxisOrder( &S_Param_Xaxis, &S_Param_Yaxis, &S_Param_Zaxis, v_Activity_u8r, &v_IstDomAxis_u8r, &v_IIndDomAxis_u8r, &v_IIIrdDomAxis_u8r );
+   1072                    v_XaxisStrideDetectedFlag_u8r=0;
+   1073                    v_YaxisStrideDetectedFlag_u8r=0;
+   1074                    v_ZaxisStrideDetectedFlag_u8r=0;
+   1075                    v_CaxisStrideDetectedFlag_u8r=0;
+   1076              }
+   1077             /* EasyCASE > */
+   1078             /* EasyCASE - */
+   1079              /* Call PEDO_Find_StableSingleAxis_StableCadenceX100_StableCadenceX100API, every 40 msec cycle,
+   1080                 to find the Stable axis out of 4-axis X,Y,Z and Composite axis and Stable Cadence for the selected axis */
+   1081             PEDO_Find_StableSingleAxis_StableCadenceX100( &S_Param_Xaxis, &S_Param_Yaxis, &S_Param_Zaxis, &S_Param_Caxis, v_IstDomAxis_u8r, v_IIndDomAxis_u8r,
+   1082                                                            v_Activity_u8r, &v_SingleStableAxis_u8r, &V_SingleAxisStableCadence_U16R  );
+   1083             V_CompositeAxis_StrideRatio_U16R = (U16)(2*S_Param_Caxis.A_StridePeakToPeakValBuf_U16X[0]/(F32)S_Param_Caxis.A_StrideIntervalBuf_U8X[0]);
+   1084             V_CompositeAxis_CadenceX100_U16R = S_Param_Caxis.V_CadenceX100_U16X;
+   1085             /* EasyCASE ) */
+   1086             /* EasyCASE ( 101541
+   1087                Axis Selection --> Single/Composite Axis ? */
+   1088             /* Do the Axis selection Single/Composite based on the activity detected */
+   1089             if (v_Activity_u8r == RUN)
+   1090                {
+   1091                V_AxisSelectFlag_U8R=C_AXIS_IS_SINGLE_U8X;
+   1092                }
+   1093             else
+   1094                {
+   1095                V_AxisSelectFlag_U8R=C_AXIS_IS_COMPOSITE_U8X;
+   1096                }
+   1097             /* EasyCASE ) */
+   1098             /* EasyCASE ( 101542
+   1099                Assign Trend Dominating Axis and filtered acceleration value of Trend Dominating Axis */
+   1100             /* Assign Trend Dominating Axis based on the axis selection (Single Axis or Composite Axis) */
+   1101             if (V_AxisSelectFlag_U8R==C_AXIS_IS_SINGLE_U8X)
+   1102                {
+   1103                v_TrendDominantAxis_u8r=v_SingleStableAxis_u8r;
+   1104                }
+   1105             else
+   1106                {
+   1107                v_TrendDominantAxis_u8r=C_CompositeAxis_U8X;
+   1108                }
+   1109             /* Assign acceleration value of Trend Dominating Axis */
+   1110             /* EasyCASE - */
+   1111             v_FiltAccelTrendAxis_s16r=v_FiltAccel4Axis_s16r[v_TrendDominantAxis_u8r];
+   1112             /* EasyCASE ) */
+   1113             /* EasyCASE ( 101543
+   1114                Find Trends (Positive/Negetive)? */
+   1115             PEDO_TrendFinder(v_FiltAccelTrendAxis_s16r, &v_FiltAccelTrendAxis_s16r);
+   1116             /* EasyCASE ) */
+   1117             /* EasyCASE ( 101544
+   1118                Extra Variables (To be removed) */
+   1119             ExtraVar.RawCompAccel = v_RawAccelC_s16r; // To be removed after filtering
+   1120             ExtraVar.v_FiltAccel4Axis_s16r[C_Xaxis_U8X]=v_FiltAccel4Axis_s16r[C_Xaxis_U8X];
+   1121             ExtraVar.v_FiltAccel4Axis_s16r[C_Yaxis_U8X]=v_FiltAccel4Axis_s16r[C_Yaxis_U8X];
+   1122             ExtraVar.v_FiltAccel4Axis_s16r[C_Zaxis_U8X]=v_FiltAccel4Axis_s16r[C_Zaxis_U8X];
+   1123             ExtraVar.v_FiltAccel4Axis_s16r[C_CompositeAxis_U8X]=v_FiltAccel4Axis_s16r[C_CompositeAxis_U8X];
+   1124             
+   1125             ExtraVar.X_StrideRatio = (U16)(2*S_Param_Xaxis.A_StridePeakToPeakValBuf_U16X[0]/(F32)S_Param_Xaxis.A_StrideIntervalBuf_U8X[0]);
+   1126             ExtraVar.Y_StrideRatio = (U16)(2*S_Param_Yaxis.A_StridePeakToPeakValBuf_U16X[0]/(F32)S_Param_Yaxis.A_StrideIntervalBuf_U8X[0]);
+   1127             ExtraVar.Z_StrideRatio = (U16)(2*S_Param_Zaxis.A_StridePeakToPeakValBuf_U16X[0]/(F32)S_Param_Zaxis.A_StrideIntervalBuf_U8X[0]);
+   1128             ExtraVar.C_StrideRatio = (U16)(2*S_Param_Caxis.A_StridePeakToPeakValBuf_U16X[0]/(F32)S_Param_Caxis.A_StrideIntervalBuf_U8X[0]);
+   1129             
+   1130             ExtraVar.IstDomAxis = v_IstDomAxis_u8r;
+   1131             ExtraVar.IIndDomAxis = v_IIndDomAxis_u8r;
+   1132             ExtraVar.IIIrdDomAxis = v_IIIrdDomAxis_u8r;
+   1133             
+   1134             ExtraVar.X_Stability = S_Param_Xaxis.V_AxisIsStableFlag_U8X;
+   1135             ExtraVar.Y_Stability = S_Param_Yaxis.V_AxisIsStableFlag_U8X;
+   1136             ExtraVar.Z_Stability = S_Param_Zaxis.V_AxisIsStableFlag_U8X;
+   1137             ExtraVar.C_Stability = S_Param_Caxis.V_AxisIsStableFlag_U8X;
+   1138             
+   1139             ExtraVar.CurrentStableAxis = v_SingleStableAxis_u8r;
+   1140             
+   1141             ExtraVar.X_CadenceX100 = S_Param_Xaxis.V_CadenceX100_U16X;
+   1142             ExtraVar.Y_CadenceX100 = S_Param_Yaxis.V_CadenceX100_U16X;
+   1143             ExtraVar.Z_CadenceX100 = S_Param_Zaxis.V_CadenceX100_U16X;
+   1144             ExtraVar.C_CadenceX100 = S_Param_Caxis.V_CadenceX100_U16X;
+   1145             
+   1146             ExtraVar.StableStrideCadenceX100 = V_SingleAxisStableCadence_U16R;
+   1147             ExtraVar.v_TrendDominantAxis_u8r=v_TrendDominantAxis_u8r;
+   1148             ExtraVar.v_SingleOrCompositeAxisFlag_u8r=V_AxisSelectFlag_U8R;
+   1149             /* EasyCASE ) */
+   1150             /* EasyCASE ) */
+   1151             /* EasyCASE ( 101545
+   1152                Human Activity */
+   1153             /* Check whether the trend is Positive or Negative */
+   1154            // gpsapp_trace("--------1234V_StatusFlags_U8R = %d ",V_StatusFlags_U8R);
+   1155             //add by xiekai
+   1156             //V_StatusFlags_U8R = 34;
+   1157             if (V_StatusFlags_U8R & M_NegativeTrend_U8X)
+   1158                {
+   1159                /* Save the value of acceleration at Negetive Trend */
+   1160                v_NegTrendAccelVal_s16r = v_FiltAccelTrendAxis_s16r;
+   1161                }
+   1162             else
+   1163                {
+   1164                if (V_StatusFlags_U8R & M_PositiveTrend_U8X)
+   1165                   {
+   1166                   /* Set the status as Step Qualified or Unqualified ? */
+   1167                   V_StatusFlags_U8R &=~(M_Qualified_U8X|M_UnQualified_U8X);
+   1168                   
+   1169                   /* Calculate the acceleration value difference for successive trends 
+   1170                      (Negetive trend value - Positive trend value) */
+   1171                   v_FiltAccelTrendAxis_s16r = v_NegTrendAccelVal_s16r - v_FiltAccelTrendAxis_s16r;
+   1172                   
+   1173                   /* Clear the Activity */
+   1174                   V_Activity_U8R = C_Clear_U8X;
+   1175                   /* EasyCASE - */
+   1176                   /* Check whether the step is Walk, Jog or Run? */
+   1177                   /* EasyCASE ( 101546
+   1178                      Lazy Walk */
+   1179                   /* Check whether the step is lazy walk step */
+   1180                   if (IS_LAZY_WALK_STEP(v_FiltAccelTrendAxis_s16r))
+   1181                      {
+   1182                      if (((v_CountStepToStep_u8r > C_LazyWalkStepToStepLowerLimit_U8X) 
+   1183                          && (v_CountStepToStep_u8r < C_LazyWalkStepToStepUpperLimit_U8X)))
+   1184                         {
+   1185                         V_StatusFlags_U8R |= M_Qualified_U8X;
+   1186                         }
+   1187                      else
+   1188                         {
+   1189                         V_StatusFlags_U8R |= M_UnQualified_U8X;
+   1190                         }
+   1191                      /* Slow activity */
+   1192                      V_Activity_U8R |= M_SlowWalk_U8X;
+   1193                      }
+   1194                   /* EasyCASE ) */
+   1195                   /* EasyCASE ( 101547
+   1196                      Walk */
+   1197                   if (IS_WALK_STEP(v_FiltAccelTrendAxis_s16r))
+   1198                      {
+   1199                      if (((PEDO_GetAbsoluteShort(v_CountStepToStep_u8r -  v_CountStepToStepPrev1_u8r) <= MAX_COUNT_DIFFERENCE) ||
+   1200                          ( PEDO_GetAbsoluteShort(v_CountStepToStep_u8r -  v_CountStepToStepPrev2_u8r) <=MAX_COUNT_DIFFERENCE) )&&
+   1201                          ((v_CountStepToStep_u8r > C_WalkStepToStepLowerLimit_U8X) && (v_CountStepToStep_u8r < C_WalkStepToStepUpperLimit_U8X)))
+   1202                         {
+   1203                         V_StatusFlags_U8R |= M_Qualified_U8X;
+   1204                         }
+   1205                      else
+   1206                         {
+   1207                         V_StatusFlags_U8R |= M_UnQualified_U8X;
+   1208                         }
+   1209                      /* Medium activity */
+   1210                      V_Activity_U8R |= M_Walk_U8X;
+   1211                      }
+   1212                   /* EasyCASE ) */
+   1213                   /* EasyCASE ( 101548
+   1214                      Jog */
+   1215                   /* Check whether the step is Jog step */
+   1216                   if (IS_JOG_STEP(v_FiltAccelTrendAxis_s16r))
+   1217                      {
+   1218                      if (((PEDO_GetAbsoluteShort(v_CountStepToStep_u8r -  v_CountStepToStepPrev1_u8r) <= MAX_COUNT_DIFFERENCE) ||
+   1219                          ( PEDO_GetAbsoluteShort(v_CountStepToStep_u8r -  v_CountStepToStepPrev2_u8r) <=MAX_COUNT_DIFFERENCE) )&&
+   1220                          ((v_CountStepToStep_u8r > C_JogStepToStepLowerLimit_U8X) && (v_CountStepToStep_u8r < C_JogStepToStepUpperLimit_U8X)))
+   1221                         {
+   1222                         V_StatusFlags_U8R |= M_Qualified_U8X;
+   1223                         }
+   1224                      else
+   1225                         {
+   1226                         V_StatusFlags_U8R |= M_UnQualified_U8X;
+   1227                         }
+   1228                      /* Brisk activity */
+   1229                      V_Activity_U8R |= M_Jog_U8X;
+   1230                      }
+   1231                   /* EasyCASE ) */
+   1232                   /* EasyCASE ( 101549
+   1233                      Step counting */
+   1234                   /* EasyCASE ( 101550
+   1235                      Time out in Detection */
+   1236                   if ((v_ModeTimeoutCount_u8r>C_DetectionModeTimeOut_U8X)&&( V_StatusFlags_U8R&M_ModeDetection_U8X)
+   1237                       /* Check whether steps ate detected for 2.8 seconds in Detection Mode or not? */)
+   1238                      {
+   1239                      /* Clear the mode timeout count */
+   1240                      v_ModeTimeoutCount_u8r=C_Clear_U8X;
+   1241                      if (((V_StatusFlags_U8R & M_DisableRobustness_U8X)==0))
+   1242                         {
+   1243                         /* No activity in detection mode; so clear the Temporary step count*/
+   1244                         v_CorrectionCount_u8r=C_Clear_U8X;
+   1245                         V_InterStepCount_U8R=C_Clear_U8X;
+   1246                         V_StatusFlags_U8R &=~(M_Qualified_U8X|M_UnQualified_U8X);
+   1247                         v_ErrorCount_u8r=C_Clear_U8X;
+   1248                         /* Clear Internal FIFO buffer data size variable */
+   1249                          ResetInternalFIFO();
+   1250                         }
+   1251                      }
+   1252                   /* EasyCASE ) */
+   1253                   /* EasyCASE ( 101551
+   1254                      Time out in Counting */
+   1255                   if ((v_ModeTimeoutCount_u8r>C_CountingModeTimeOut_U8X)&&( V_StatusFlags_U8R&M_ModeCounting_U8X)
+   1256                       /* No steps for 4 seconds in Count Mode*/)
+   1257                      {
+   1258                      /* Clear the mode timeout count */
+   1259                      v_ModeTimeoutCount_u8r=C_Clear_U8X;
+   1260                      if (((V_StatusFlags_U8R & M_DisableRobustness_U8X)==0))
+   1261                         {
+   1262                         /* No activity in counting mode; so clear the Temporary step count*/
+   1263                         v_CorrectionCount_u8r=C_Clear_U8X;
+   1264                         V_StatusFlags_U8R &=~(M_Qualified_U8X|M_UnQualified_U8X);
+   1265                         v_ErrorCount_u8r=C_Clear_U8X;
+   1266                          V_StatusFlags_U8R|=M_ModeDetection_U8X;
+   1267                          V_StatusFlags_U8R&=~M_ModeCounting_U8X;
+   1268                         /* Clear Internal FIFO buffer data size variable */
+   1269                          ResetInternalFIFO();
+   1270                         }
+   1271                      }
+   1272                   /* EasyCASE ) */
+   1273          		// gpsapp_trace("--------V_StatusFlags_U8R = %d ",V_StatusFlags_U8R);
+   1274                   if (/*Check whether step is valid or not*/
+   1275                       ((V_StatusFlags_U8R & (M_Qualified_U8X|M_UnQualified_U8X))!=0))
+   1276                      {
+   1277                      /* If there is change in activity and the current result diff are greater than certain "Threshold" then
+   1278                         temporary counts are cleared.Threshold=(Largest of Current Result Diff and previous Result Diff)/2.
+   1279                         This is applicable in detection mode */
+   1280                      /* EasyCASE ( 101552
+   1281                         Activity Monitor */
+   1282                      if (((v_PreviousActivity_u8r & V_Activity_U8R)==C_Clear_U8X) && (v_PreviousActivity_u8r !=C_Clear_U8X) &&
+   1283                          ( V_StatusFlags_U8R&M_ModeDetection_U8X) && ((V_StatusFlags_U8R & M_DisableRobustness_U8X)==0) &&
+   1284                          (((PEDO_GetAbsoluteShort(v_FiltAccelTrendAxis_s16r-v_PrevPosNegTrendAccelValDiff_s16r))<<C_CountOne_U8X)>
+   1285                          ((v_FiltAccelTrendAxis_s16r>v_PrevPosNegTrendAccelValDiff_s16r)?v_FiltAccelTrendAxis_s16r:v_PrevPosNegTrendAccelValDiff_s16r)))
+   1286                         {
+   1287                         /* Activities differs in Detection state;  So, clear the temporary step count */
+   1288                         V_InterStepCount_U8R = C_Clear_U8X;
+   1289                         v_CorrectionCount_u8r=C_Clear_U8X;
+   1290                         V_StatusFlags_U8R &=~(M_Qualified_U8X|M_UnQualified_U8X);
+   1291                         
+   1292                         /* Clear Internal FIFO buffer data size variable */
+   1293                         ResetInternalFIFO();
+   1294                         }
+   1295                      /* EasyCASE ) */
+   1296                      v_PreviousActivity_u8r=V_Activity_U8R; /*Stores the current Activity Type*/
+   1297                      v_PrevPosNegTrendAccelValDiff_s16r=v_FiltAccelTrendAxis_s16r; /* Stores the current Negetive-To-Positive Trend Value Difference */
+   1298                      v_ErrorCount_u8r=C_Clear_U8X; /*Error Count cleared*/
+   1299                      v_ModeTimeoutCount_u8r=C_Clear_U8X; /* Reset the Mode Timeout Count */
+   1300                      /* EasyCASE - */
+   1301                      /* Find instantaneous activity */
+   1302                      /* EasyCASE - */
+   1303                      v_AvgActivityDetectionRatio_u16r = v_FiltAccelTrendAxis_s16r/V_SampleCountForCycle_U8R;
+   1304                      if (/*If Activity threshold ratio > Lower threshold for run*/
+   1305                          v_AvgActivityDetectionRatio_u16r>C_RunLowerRange_U8X)
+   1306                         {
+   1307                         V_ActivityInstateneous_U8R = (U8)RUN;
+   1308                         }
+   1309                      else
+   1310                         {
+   1311                         if (/*If threshold is <= Run Lower range and != 0*/
+   1312                             (v_AvgActivityDetectionRatio_u16r>C_WalkLowerRange_U8X))
+   1313                            {
+   1314                            V_ActivityInstateneous_U8R = (U8)WALK;
+   1315                            }
+   1316                         else
+   1317                            {
+   1318                            V_ActivityInstateneous_U8R = (U8)STATIONARY;
+   1319                            }
+   1320                         }
+   1321                      /* Extra Variables (To be removed ) */
+   1322                      ExtraVar.InstStep_PP_Val = v_FiltAccelTrendAxis_s16r;
+   1323                      ExtraVar.InstStep_PP_Time = V_SampleCountForCycle_U8R;
+   1324                      ExtraVar.InstStepRatio = (unsigned int)((F32)v_FiltAccelTrendAxis_s16r/(F32)ExtraVar.InstStep_PP_Time);
+   1325                      ExtraVar.InstActivity = (U8)V_ActivityInstateneous_U8R;
+   1326                      /* EasyCASE - */
+   1327                      /* Check whether the  step is Qualified */
+   1328                      if (V_StatusFlags_U8R & M_Qualified_U8X)
+   1329                         {
+   1330                         /* Check whether the mode is counting mode */
+   1331                         /* EasyCASE ( 101553
+   1332                            Activity Detection Block - FIFO */
+   1333                         for (v_Index_u8r=(C_ActivityFilterSize_U8X-1);v_Index_u8r>C_CountZero_U8X;v_Index_u8r--)
+   1334                            {
+   1335                            a_AvgActivityDetectionRatioBuf_u16r[v_Index_u8r]=a_AvgActivityDetectionRatioBuf_u16r[v_Index_u8r-1];
+   1336                            }
+   1337                         a_AvgActivityDetectionRatioBuf_u16r[C_CountZero_U8X]= (U16)((F32)v_FiltAccelTrendAxis_s16r/(F32)V_SampleCountForCycle_U8R);
+   1338                         /* EasyCASE - */
+   1339                         /* Calculate the sum of the ActivityDetectionRatio buffer values */
+   1340                         v_TempU32_u32r=0;
+   1341                         for (v_Index_u8r=(C_ActivityFilterSize_U8X-1);v_Index_u8r>=C_CountZero_U8X;v_Index_u8r--)
+   1342                            {
+   1343                            v_TempU32_u32r += a_AvgActivityDetectionRatioBuf_u16r[v_Index_u8r];
+   1344                            }
+   1345                         /*Taking Moving average of ratio*/
+   1346                         v_AvgActivityDetectionRatio_u16r=(U16)((F32)v_TempU32_u32r/(F32)C_ActivityFilterSize_U8X);
+   1347                         /* EasyCASE - */
+   1348                         /* Check the current activity using Average Activity Detection Ratio */
+   1349                         if (/*If Activity threshold ratio > Lower threshold for run*/
+   1350                             (v_AvgActivityDetectionRatio_u16r>C_RunLowerRange_U8X))
+   1351                            {
+   1352                            V_ActivityDetected_U8R = (U8)RUN;
+   1353                            }
+   1354                         else
+   1355                            {
+   1356                            if (/*If threshold is <= Run Lower range and != 0*/
+   1357                                (v_AvgActivityDetectionRatio_u16r>C_WalkLowerRange_U8X))
+   1358                               {
+   1359                               /* Check Composite Axis Stride Peak-To-Peak Value and Stride Interval Time Ratio to varify whether activity is RUN or WALK? */
+   1360                               /* EasyCASE - */
+   1361                               V_ActivityDetected_U8R = (U8)WALK;
+   1362                               }
+   1363                            else
+   1364                               {
+   1365                               V_ActivityDetected_U8R = (U8) STATIONARY;
+   1366                               }
+   1367                            }
+   1368                         /* EasyCASE ) */
+   1369                         if (V_StatusFlags_U8R&M_ModeCounting_U8X)
+   1370                            {
+   1371                            /* EasyCASE ( 101554
+   1372                               Counting Mode */
+   1373                             //  gpsapp_trace("00000000000v_CorrectionCount_u8r = %d ",v_CorrectionCount_u8r);
+   1374                            if (/*Check whether correction count >3 in Counting Mode*/
+   1375                                v_CorrectionCount_u8r>C_CorrectionCountLimit_U8X)
+   1376                               {
+   1377                               /* Increment Step Count with Correction Count added into it */
+   1378                               V_StepCount_U16R+=(v_CorrectionCount_u8r+C_CountOne_U8X);
+   1379                               
+   1380                               /* Reset the Correction Count */
+   1381                               v_CorrectionCount_u8r = C_Clear_U8X;
+   1382                               
+   1383                               /* Push the current step parameters into external buffer */
+   1384                               SetExternalBuffer(&v_CountStepToStep_u8r,&V_SampleCountForCycle_U8R,&V_ActivityInstateneous_U8R,1);
+   1385                               
+   1386                               /* Get the internal buffer data size */
+   1387                               V_TempFIFOSize_U8R = GetInternalFIFOSize();
+   1388                               
+   1389                               /* Get internal buffer Parameters (i.e. Correction steps Paramaters ) */
+   1390                               GetInternalBuffer(A_TempS2SCountBuffer_U8R, A_TempP2PCountBuffer_U8R, A_TempActivityBuffer_U8R);
+   1391                               
+   1392                               /* Push the Correction Steps parameters into External Buffer */
+   1393                               SetExternalBuffer(A_TempS2SCountBuffer_U8R, A_TempP2PCountBuffer_U8R, A_TempActivityBuffer_U8R, V_TempFIFOSize_U8R);
+   1394                               }
+   1395                            else
+   1396                               {
+   1397                               /* Increment the Step Count */
+   1398                                V_StepCount_U16R++;
+   1399                                
+   1400                               /* Push the current step parameters into external buffer */
+   1401                               SetExternalBuffer(&v_CountStepToStep_u8r,&V_SampleCountForCycle_U8R,&V_ActivityInstateneous_U8R,1);
+   1402                               }
+   1403                            /* EasyCASE ) */
+   1404                            }
+   1405                         else
+   1406                            {
+   1407                            /*Check whether current mode is Detection Mode*/
+   1408                            /* EasyCASE ( 101555
+   1409                               Detection Mode */
+   1410                            //   gpsapp_trace("1111111111111111 V_StatusFlags_U8R = %d ",V_StatusFlags_U8R);
+   1411                            if (V_StatusFlags_U8R&M_ModeDetection_U8X)
+   1412                               {
+   1413                               if (/* Correction count is added to InterStepCount when correction count > 3 in detection mode */
+   1414                                   v_CorrectionCount_u8r>C_CorrectionCountLimit_U8X)
+   1415                                  {
+   1416                                  /* Increment the InterStepCount with CorrectionCount added into it. */
+   1417                                  V_InterStepCount_U8R+=(v_CorrectionCount_u8r+1);
+   1418                                  
+   1419                                  /* Reset the Correction Count */
+   1420                                  v_CorrectionCount_u8r = C_Clear_U8X;
+   1421                                  
+   1422                                  /* Push the Detection mode Step Parameters into internal buffer */
+   1423                                  SetInternalBuffer(v_CountStepToStep_u8r,V_SampleCountForCycle_U8R,V_ActivityInstateneous_U8R);
+   1424                                  }
+   1425                               else
+   1426                                  {
+   1427                                  /* Increment the InterStepCount */
+   1428                                   V_InterStepCount_U8R++;
+   1429                                   
+   1430                                  /* Push the Detection mode Step Parameters into internal buffer */
+   1431                                  SetInternalBuffer(v_CountStepToStep_u8r,V_SampleCountForCycle_U8R,V_ActivityInstateneous_U8R);
+   1432                                  }
+   1433                               if (/* When interstep count > 9 mode changed to counting in case if Robustness feature enabled;
+   1434                                      When interstep count > 3 mode changed to counting in case if Robustness feature disabled */
+   1435                                   ((V_InterStepCount_U8R > V_InterStepCountLimit_U8R)&&((V_StatusFlags_U8R & M_DisableRobustness_U8X)==0))||
+   1436                                   ((V_InterStepCount_U8R > V_InterStepCountLimit_U8R)&&((V_StatusFlags_U8R & M_DisableRobustness_U8X)==M_DisableRobustness_U8X)))
+   1437                                  {
+   1438                                  /* Set the mode to MODE_COUNTING */
+   1439                                  V_StatusFlags_U8R|=M_ModeCounting_U8X;
+   1440                                  V_StatusFlags_U8R&=~M_ModeDetection_U8X;
+   1441                                  
+   1442                                  /* Increment the StepCount */
+   1443                                  V_StepCount_U16R += (V_InterStepCount_U8R+v_CorrectionCount_u8r);
+   1444                                  
+   1445                                  /* Reset the InterStepCount */
+   1446                                  V_InterStepCount_U8R = C_Clear_U8X;
+   1447                                  
+   1448                                  /* Reset the CorrectionCount */
+   1449                                   v_CorrectionCount_u8r = C_Clear_U8X;
+   1450                                   
+   1451                                   /* Get the internal buffer data size */ 
+   1452                                  V_TempFIFOSize_U8R = GetInternalFIFOSize();
+   1453                                  
+   1454                                  /* Get internal buffer Parameters (i.e. InterStep & CorrectionSteps  Paramaters ) */
+   1455                                  GetInternalBuffer(A_TempS2SCountBuffer_U8R, A_TempP2PCountBuffer_U8R, A_TempActivityBuffer_U8R);
+   1456                                  
+   1457                                  /* Push all the internal buffer parameters into External Buffer */
+   1458                                  SetExternalBuffer(A_TempS2SCountBuffer_U8R, A_TempP2PCountBuffer_U8R, A_TempActivityBuffer_U8R, V_TempFIFOSize_U8R);
+   1459                                  }
+   1460                               }
+   1461                            /* EasyCASE ) */
+   1462                            }
+   1463                         }
+   1464                      else
+   1465                         {
+   1466                         /* EasyCASE ( 101556
+   1467                            Correction Count */
+   1468                         if (/*Check whether Step is unqualified*/
+   1469                             V_StatusFlags_U8R & M_UnQualified_U8X)
+   1470                            {
+   1471                            /* Increment the Correction Count */
+   1472                            v_CorrectionCount_u8r++;
+   1473                            
+   1474                            /* Push the Detection mode Step Parameters into internal buffer */
+   1475                            SetInternalBuffer(v_CountStepToStep_u8r,V_SampleCountForCycle_U8R,V_ActivityInstateneous_U8R);
+   1476                            }
+   1477                         /* EasyCASE ) */
+   1478                         }
+   1479                      }
+   1480                   else
+   1481                      {
+   1482                      /* EasyCASE ( 101557
+   1483                         Error Count */
+   1484                      if (/*Error count is incremented if the step is not valid and not due to noise*/
+   1485                          (v_FiltAccelTrendAxis_s16r>C_SENSOR_NOISE_LEVEL_U8X))
+   1486                         {
+   1487                         /*Error Count is incremented*/
+   1488                         v_ErrorCount_u8r++;
+   1489                         }
+   1490                      if (/*When the error count becomes greater than 3 the temporary counts are cleared*/
+   1491                          v_ErrorCount_u8r>C_ErrorCountLimit_U8X)
+   1492                         {
+   1493                         /*The mode changed to detection and counts are cleared*/
+   1494                         V_StatusFlags_U8R|=M_ModeDetection_U8X;
+   1495                         V_StatusFlags_U8R&=~M_ModeCounting_U8X;
+   1496                         v_ErrorCount_u8r=C_Clear_U8X;
+   1497                         v_CorrectionCount_u8r=C_Clear_U8X;
+   1498                         V_InterStepCount_U8R=C_Clear_U8X;
+   1499                         V_StatusFlags_U8R &=~(M_Qualified_U8X|M_UnQualified_U8X);
+   1500                         v_ModeTimeoutCount_u8r = C_Clear_U8X;
+   1501                         
+   1502                         /* Reset the Internal Buffer data Size Counter */
+   1503                          ResetInternalFIFO();
+   1504                         }
+   1505                      /* EasyCASE ) */
+   1506                      }
+   1507                   /* EasyCASE ( 101558
+   1508                      Step to Step Count Updation */
+   1509                   if (/*Count step to step is updated if the trend change is not due to noise*/
+   1510                       v_FiltAccelTrendAxis_s16r>C_SENSOR_NOISE_LEVEL_U8X)
+   1511                      {
+   1512                      /* Update the last, secondlast and thridlast count variables */
+   1513                      v_CountStepToStepPrev2_u8r = v_CountStepToStepPrev1_u8r;
+   1514                      v_CountStepToStepPrev1_u8r = v_CountStepToStep_u8r;
+   1515                      v_CountStepToStep_u8r = C_Clear_U8X;
+   1516                      }
+   1517                   /* EasyCASE ) */
+   1518                   /* EasyCASE ) */
+   1519                   /* Reset the sample count for cycle */
+   1520                   V_SampleCountForCycle_U8R = C_Clear_U8X;
+   1521                   }
+   1522                else
+   1523                   {
+   1524                   /* EasyCASE ( 101559
+   1525                      Time out in Detection */
+   1526                   if (/* No steps for 2.8 seconds in Detection Mode */
+   1527                       /* No steps for 4 seconds in Counting Mode */
+   1528                       ((v_ModeTimeoutCount_u8r>C_DetectionModeTimeOut_U8X)&&( V_StatusFlags_U8R&M_ModeDetection_U8X))||
+   1529                       ((v_ModeTimeoutCount_u8r>C_CountingModeTimeOut_U8X)&&( V_StatusFlags_U8R&M_ModeCounting_U8X)))
+   1530                      {
+   1531                      v_AvgActivityDetectionRatio_u16r=0;
+   1532                      V_ActivityDetected_U8R = (U8) STATIONARY;
+   1533                      for (v_Index_u8r=(C_ActivityFilterSize_U8X-1);v_Index_u8r>=C_CountZero_U8X;v_Index_u8r--)
+   1534                         {
+   1535                         a_AvgActivityDetectionRatioBuf_u16r[v_Index_u8r]=0;
+   1536                         }
+   1537                      }
+   1538                   /* EasyCASE ) */
+   1539                   }
+   1540                }
+   1541             /* EasyCASE ) */
+   1542             /*Current status are stored*/
+   1543             v_PreStatusFlags_u8r=V_StatusFlags_U8R;
+   1544             /* EasyCASE - */
+   1545             /* return the composite value */
+   1546             return v_FiltAccelTrendAxis_s16r;
+   1547             }
+   1548          /* EasyCASE ) */
+   1549          /* EasyCASE ( 101525
+   1550             PEDO_MedianFilter */
+   1551          /* EasyCASE F */
+   1552          /*******************************************************************************
+   1553           * Description: *//**\brief This function finds the median of the input array of
+   1554           * the given size. 
+   1555           *  
+   1556           *
+   1557           *
+   1558           *
+   1559           *  \param
+   1560           *     S32 *p_InputArray_s32r   : Input Array for which median has to be found.
+   1561           *     U8   v_SizeInputArray_u8 : Size of the input array.
+   1562           *  \return 
+   1563           *     U32 :It returns median value of the input array.  
+   1564           *
+   1565           ******************************************************************************/
+   1566          /* Scheduling:
+   1567           * none
+   1568           *
+   1569           *
+   1570           * Usage guide:
+   1571           *
+   1572           *
+   1573           * Remarks:
+   1574           *
+   1575           ******************************************************************************/
+   1576          
+   1577           U32 PEDO_MedianFilter( U32 *p_InputArray_u32r, U8 v_SizeInputArray_u8r)//中值滤波器
+   1578             {
+   1579             /* EasyCASE ( 101526
+   1580                Local Variables */
+   1581             /* EasyCASE < */
+   1582             U8  v_index1_u8r=0, v_index2_u8r=0;
+   1583             U32 a_InputArrayCopy_u32r[20]={0};
+   1584             U32 v_Temp_u32r=0;
+   1585             F32 v_Temp_f32r=0;
+   1586             /* EasyCASE > */
+   1587             /* EasyCASE ) */
+   1588             if ((v_SizeInputArray_u8r > 0) && (v_SizeInputArray_u8r <= 20)/* Check whether input array size is proper or not?? */)
+   1589                {
+   1590                /* EasyCASE ( 101527
+   1591                   Do sorting of the input data in ascending order */
+   1592                /* Copy the values of input array */
+   1593                for (v_index1_u8r=0; v_index1_u8r < v_SizeInputArray_u8r; v_index1_u8r++)
+   1594                   {
+   1595                   a_InputArrayCopy_u32r[v_index1_u8r] = *(p_InputArray_u32r + v_index1_u8r);
+   1596                   }
+   1597                /* Do bubble sorting */
+   1598                for (v_index1_u8r=0; v_index1_u8r < (v_SizeInputArray_u8r-1); v_index1_u8r++)
+   1599                   {
+   1600                   for (v_index2_u8r = (v_index1_u8r+1); v_index2_u8r < v_SizeInputArray_u8r; v_index2_u8r++)
+   1601                      {
+   1602                      if (a_InputArrayCopy_u32r[v_index1_u8r] > a_InputArrayCopy_u32r[v_index2_u8r])
+   1603                         {
+   1604                         v_Temp_u32r = a_InputArrayCopy_u32r[v_index1_u8r];
+   1605                         a_InputArrayCopy_u32r[v_index1_u8r] = a_InputArrayCopy_u32r[v_index2_u8r];
+   1606                         a_InputArrayCopy_u32r[v_index2_u8r] = v_Temp_u32r;
+   1607                         }
+   1608                      }
+   1609                   }
+   1610                /* EasyCASE ) */
+   1611                /* EasyCASE ( 101528
+   1612                   Find the Median Value for input data */
+   1613                /* Find the median of the input array */
+   1614                if ((v_SizeInputArray_u8r%2)==0)
+   1615                   {
+   1616                   /* Input Buffer length is even */
+   1617                    v_Temp_f32r = (F32)( a_InputArrayCopy_u32r[(v_SizeInputArray_u8r/2)-1] + a_InputArrayCopy_u32r[(v_SizeInputArray_u8r/2)] )/2;
+   1618                   }
+   1619                else
+   1620                   {
+   1621                   /* Input Buffer length is odd */
+   1622                   v_Temp_f32r = (F32)a_InputArrayCopy_u32r[(v_SizeInputArray_u8r-1)/2];
+   1623                   }
+   1624                /* EasyCASE ) */
+   1625                }
+   1626             else
+   1627                {
+   1628                /* Input Buffer length is not in proper range so return 0 */
+   1629                }
+   1630             return (U32) v_Temp_f32r;
+   1631             }
+   1632          /* EasyCASE ) */
+   1633          /* EasyCASE ) */
+   1634          /* EasyCASE ( 100504
+   1635             Local functions */
+   1636          /* EasyCASE ( 101586
+   1637             PEDO_GetAbsoluteShort */
+   1638          /* EasyCASE F */
+   1639          /*******************************************************************************
+   1640           * Description: *//**\brief This function should be called to get the absolute value
+   1641           * of the input value of short type. 
+   1642           * 
+   1643           *
+   1644           *
+   1645           *
+   1646           *  \param
+   1647           *  short v_Val_s16r --> Input value for which absolute value needs to be calculated.
+   1648           *
+   1649           *
+   1650           *
+   1651           *  \return 
+   1652           *   short --> Absolute value of the Input value.
+   1653           *            
+   1654           *
+   1655           ******************************************************************************/
+   1656          /* Scheduling: 
+   1657           *  
+   1658           *
+   1659           *
+   1660           *
+   1661           * Usage guide:
+   1662           *
+   1663           *
+   1664           * Remarks:
+   1665           *
+   1666           ******************************************************************************/
+   1667          static short PEDO_GetAbsoluteShort(short v_Val_s16r)
+   1668             {
+   1669             return (v_Val_s16r < 0)? -v_Val_s16r : v_Val_s16r;
+   1670             }
+   1671          /* EasyCASE ) */
+   1672          /* EasyCASE ( 101610
+   1673             PEDO_TrendFinder */
+   1674          /* EasyCASE F */
+   1675          /*******************************************************************************
+   1676           * Description: *//**\brief This function should be called to find the current trend
+   1677           * (Positive/Negetive) and optimum value of the acceleration at the current trend. 
+   1678           *
+   1679           *  
+   1680           *
+   1681           *
+   1682           *
+   1683           *  \param
+   1684           *  short  v_AccelVal_s16r        : Input Acceleration value (in LSBs)
+   1685           *  short *v_OptimalAccelVal_s16r : Optimum value of acceleration at the current trend
+   1686           *
+   1687           *
+   1688           *
+   1689           *  \return 
+   1690           *   NONE
+   1691           *            
+   1692           *
+   1693           ******************************************************************************/
+   1694          /* Scheduling: 
+   1695           *  
+   1696           *
+   1697           *
+   1698           *
+   1699           * Usage guide:
+   1700           *
+   1701           *
+   1702           * Remarks:
+   1703           *
+   1704           ******************************************************************************/
+   1705          static void PEDO_TrendFinder(short v_AccelVal_s16r, short *v_OptimalAccelVal_s16r)
+   1706             {
+   1707             /* EasyCASE ( 101627
+   1708                Local Variables */
+   1709             static signed short     v_Prev1AccelVal_s16r = -1;  /* Previous Acceleration value */
+   1710             static signed short     v_Prev2AccelVal_s16r = -1;  /* Previous to previous Acceleration value */
+   1711             static signed char      v_CurrTrend_s8r = -1;     /* Current trend (default trend in Negetive trend )*/
+   1712             /* EasyCASE ) */
+   1713             /* EasyCASE ( 101778
+   1714                Find Positive/Negetive trends and value at trends */
+   1715             /* Clear the Positive nad Negetive trend bit in the Status Flag */
+   1716             /* EasyCASE - */
+   1717             V_StatusFlags_U8R &=~(M_NegativeTrend_U8X|M_PositiveTrend_U8X); /*Status flag to hold the change in trend */
+   1718             if (v_CurrTrend_s8r == 1)
+   1719                {
+   1720                /* EasyCASE ( 101628
+   1721                   Current trend is Positive, Check for Negetive trend */
+   1722                if ((v_AccelVal_s16r < v_Prev1AccelVal_s16r) && (v_AccelVal_s16r < v_Prev2AccelVal_s16r))
+   1723                   {
+   1724                   v_CurrTrend_s8r = -1; /* Set the current trend as negative */
+   1725                   V_StatusFlags_U8R |= M_NegativeTrend_U8X; /* Set the change in trend as negative */
+   1726                   
+   1727                   /* Return the optimal value of acceleration at trend change
+   1728                    (in this case maximum of prev and prevToPrev acceleration values) */
+   1729                   *v_OptimalAccelVal_s16r = (v_Prev1AccelVal_s16r > v_Prev2AccelVal_s16r)?
+   1730                                              v_Prev1AccelVal_s16r : v_Prev2AccelVal_s16r;
+   1731                   }
+   1732                /* EasyCASE ) */
+   1733                }
+   1734             else
+   1735                {
+   1736                /* EasyCASE ( 101629
+   1737                   Current trend is Negetive, Check for Positive trend */
+   1738                if ((v_AccelVal_s16r > v_Prev1AccelVal_s16r) && (v_AccelVal_s16r > v_Prev2AccelVal_s16r))
+   1739                   {
+   1740                   v_CurrTrend_s8r = 1;    /* Set the current trend as Positive */
+   1741                   V_StatusFlags_U8R |= M_PositiveTrend_U8X;  /* Set the change in trend as Positive */
+   1742                   
+   1743                   /* Return the optimal value of acceleration at trend change
+   1744                    (in this case maximum of prev and prevToPrev acceleration values) */
+   1745                   *v_OptimalAccelVal_s16r = (v_Prev1AccelVal_s16r < v_Prev2AccelVal_s16r)?
+   1746                                              v_Prev1AccelVal_s16r : v_Prev2AccelVal_s16r;
+   1747                   }
+   1748                /* EasyCASE ) */
+   1749                }
+   1750             /* Update the second last composite value */
+   1751             v_Prev2AccelVal_s16r = v_Prev1AccelVal_s16r;
+   1752             /* Update the last composite values */
+   1753             v_Prev1AccelVal_s16r = v_AccelVal_s16r;
+   1754             /* Return the Change in trend */
+   1755             /* EasyCASE ) */
+   1756             }
+   1757          /* EasyCASE ) */
+   1758          /* EasyCASE ( 101612
+   1759             PEDO_Get_SingleAxisAccelFeatures */
+   1760          /* EasyCASE F */
+   1761          /*******************************************************************************
+   1762           * Description: *//**\brief This function should be called to get the acceleration pattern 
+   1763           * features for a single axis like Trend Type(Positive/Negetive), Value at Trends,
+   1764           * Stride Interval, Stride Cadence, Axis Stability (By checking the uniformity of
+   1765           * stride pattern) etc.  
+   1766           *
+   1767           *  
+   1768           *
+   1769           *
+   1770           *
+   1771           *  \param
+   1772           *   S16 v_AccelValFilt_s16r : Acceleration Value (in LSBs)
+   1773           *   ts_SingleAxis *p_AccelerationPatternFeatures_xxr : Structure variable to hold
+   1774           *   the single axis pattern features.
+   1775           *
+   1776           *
+   1777           *  \return 
+   1778           *   NONE
+   1779           *            
+   1780           *
+   1781           ******************************************************************************/
+   1782          /* Scheduling: 
+   1783           *  Call this function every 40 msec for each individual axis to get the acceletation pattern features.
+   1784           *
+   1785           *
+   1786           *
+   1787           * Usage guide:
+   1788           *
+   1789           *
+   1790           * Remarks:
+   1791           *
+   1792           ******************************************************************************/
+   1793          void PEDO_Get_SingleAxisAccelFeatures( S16 v_AccelValFilt_s16r, ts_SingleAxis *p_AccelerationPatternFeatures_xxr)
+   1794             {
+   1795             /* EasyCASE ( 101636
+   1796                Local Variables */
+   1797             U8  v_Index_u8r=0;   
+   1798             U8  v_TrendChangeFoundFlag_u8r=0;
+   1799             U8  v_StrideInterval_u8r=0;
+   1800             U8  v_InstStrideUniformity_u8r=0;
+   1801             U8 v_UniformityTestPassedFlag_u8r=0;
+   1802             U8 v_StrideIntervalTestPassedFlag_u8r=0;
+   1803             U8 v_TestCount_u8r=0;
+   1804             
+   1805             S16 v_InstTrendValue_s16r=0;
+   1806             S16 v_StrideMinVal_s16r=0;
+   1807             S16 v_StrideMaxVal_s16r=0;
+   1808             U16 v_StridePeakToPeakVal_u16r=0;
+   1809             U16 v_Temp_u16r=0;
+   1810             /* EasyCASE ) */
+   1811             /* EasyCASE ( 101662
+   1812                Increment V_StrideIntervalCount_U8X counter */
+   1813             if (p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeValidityFlag_U8X==1)
+   1814                {
+   1815                p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X++; /* Increment the count every 40msec */
+   1816                }
+   1817             else
+   1818                {
+   1819                /* If there is no trend detected for 2.4 seconds disable V_SuccessiveTrendTimeValidityFlag_U8X flag */
+   1820                /* Enable V_SuccessiveTrendTimeValidityFlag_U8X flag when any trend is detected */
+   1821                if (p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X >= C_STRIDE_INTERVAL_COUNT_MAXLIMIT_U8R)
+   1822                   {
+   1823                   p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeValidityFlag_U8X=0; /* Reset V_StrideIntervalValidityFlag_U8X flag */
+   1824                   p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X=C_STRIDE_INTERVAL_COUNT_MAXLIMIT_U8R; /* Clear V_StrideIntervalCount_U8X  count */
+   1825                   }
+   1826                }
+   1827             /* EasyCASE ) */
+   1828             /* EasyCASE ( 101661
+   1829                Update the acceleration value FIFO */
+   1830             if ((p_AccelerationPatternFeatures_xxr->V_AccelBufDataCount_U8X < C_SINGLE_AXIS_ACCEL_VALUE_BUFSIZE_U8R))
+   1831                {
+   1832                p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[p_AccelerationPatternFeatures_xxr->V_AccelBufDataCount_U8X] = v_AccelValFilt_s16r;
+   1833                p_AccelerationPatternFeatures_xxr->V_AccelBufDataCount_U8X ++;
+   1834                }
+   1835             else
+   1836                {
+   1837                for (v_Index_u8r=0; v_Index_u8r<(C_SINGLE_AXIS_ACCEL_VALUE_BUFSIZE_U8R-1); v_Index_u8r++)
+   1838                   {
+   1839                   p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[C_SINGLE_AXIS_ACCEL_VALUE_BUFSIZE_U8R-1-v_Index_u8r]=p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[C_SINGLE_AXIS_ACCEL_VALUE_BUFSIZE_U8R-2-v_Index_u8r];
+   1840                   }
+   1841                p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[0]=v_AccelValFilt_s16r;
+   1842                }
+   1843             /* EasyCASE ) */
+   1844             /* EasyCASE ( 101660
+   1845                Check for trends ( Positive or Negetive Trend ) ?? */
+   1846             if (/* Check for Negetive Trend if Positive Trend got detected ?? */
+   1847                 ( p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[0] < p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[1] ) &&
+   1848                 ( p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[0] < p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[2] ) &&
+   1849                 (p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X == 1))
+   1850                {
+   1851                /* Set the current trend as Negative trend ??  */
+   1852                p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X = -1;
+   1853                            
+   1854                /* Find the optimal value for the Negetive Trend */
+   1855                v_InstTrendValue_s16r = (p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[1] > p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[2])?
+   1856                p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[1] : p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[2];
+   1857                
+   1858                /* Set the trend change found flag */                    
+   1859                v_TrendChangeFoundFlag_u8r = 1;
+   1860                }
+   1861             else
+   1862                {
+   1863                if (/* Check for Positive Trend if Negetive Trend got detected ?? */
+   1864                    ( p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[0] > p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[1] ) &&
+   1865                    ( p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[0] > p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[2] )&&
+   1866                    (p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X == -1))
+   1867                   {
+   1868                   /* Set the current trend as Positive trend */
+   1869                   p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X = 1;
+   1870                                     
+   1871                   /* Find the optimal value for the Positive Trend */
+   1872                   v_InstTrendValue_s16r =( p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[1] < p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[2])?
+   1873                   p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[1] : p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[2];
+   1874                   
+   1875                   /* Set the trend change found flag */                            
+   1876                   v_TrendChangeFoundFlag_u8r = 1;
+   1877                   }
+   1878                }
+   1879             /* EasyCASE ) */
+   1880             /* EasyCASE ( 101777
+   1881                IF valid trend is found, (1)Check for Valid Stride Patterns; (2)Update the Stride Parameters
+   1882                ( Stride Peak-To-Peak Value, Stride Interval, Cadence, Axis_Stability_Flag etc.). */
+   1883             /* Check whether a valid trend (Positive or negetive) detected  ?? */
+   1884             if (v_TrendChangeFoundFlag_u8r == 1 /* a valid trend got detected */)
+   1885                {
+   1886                /* EasyCASE ( 101650
+   1887                   Update the trend values like TYPE, VALUE, SUCCESSIVE_TREND_TIME_COUNT into FIFO */
+   1888                if (p_AccelerationPatternFeatures_xxr->V_AccelTrendBufDataCount_U8X < C_SINGLE_AXIS_TREND_BUFSIZE_U8R)
+   1889                   {
+   1890                   p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[p_AccelerationPatternFeatures_xxr->V_AccelTrendBufDataCount_U8X]       = p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X;
+   1891                   p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[p_AccelerationPatternFeatures_xxr->V_AccelTrendBufDataCount_U8X] = v_InstTrendValue_s16r;
+   1892                   p_AccelerationPatternFeatures_xxr->A_AccelSuccecciveTrendTimeBuf_U8X[p_AccelerationPatternFeatures_xxr->V_AccelTrendBufDataCount_U8X] = p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X;
+   1893                   p_AccelerationPatternFeatures_xxr->V_AccelTrendBufDataCount_U8X++;
+   1894                   }
+   1895                else
+   1896                   {
+   1897                   for (v_Index_u8r=0; v_Index_u8r<(C_SINGLE_AXIS_TREND_BUFSIZE_U8R-1); v_Index_u8r++)
+   1898                      {
+   1899                      p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[C_SINGLE_AXIS_TREND_BUFSIZE_U8R-1-v_Index_u8r]       = p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[C_SINGLE_AXIS_TREND_BUFSIZE_U8R-2-v_Index_u8r];
+   1900                       p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[C_SINGLE_AXIS_TREND_BUFSIZE_U8R-1-v_Index_u8r] = p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[C_SINGLE_AXIS_TREND_BUFSIZE_U8R-2-v_Index_u8r];
+   1901                      p_AccelerationPatternFeatures_xxr->A_AccelSuccecciveTrendTimeBuf_U8X[C_SINGLE_AXIS_TREND_BUFSIZE_U8R-1-v_Index_u8r] = p_AccelerationPatternFeatures_xxr->A_AccelSuccecciveTrendTimeBuf_U8X[C_SINGLE_AXIS_TREND_BUFSIZE_U8R-2-v_Index_u8r];
+   1902                      }
+   1903                   p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[0]       = p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X;
+   1904                   p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[0] = v_InstTrendValue_s16r;
+   1905                   p_AccelerationPatternFeatures_xxr->A_AccelSuccecciveTrendTimeBuf_U8X[0] = p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X;
+   1906                   }
+   1907                v_TrendChangeFoundFlag_u8r = 0; /* clear v_TrendChangeFoundFlag_u8r flag*/
+   1908                p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X = 0; /* Clear Successive Trend Time Counter */
+   1909                p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeValidityFlag_U8X=1; /* Enable V_SuccessiveTrendTimeValidityFlag_U8X flag whenever u fing the trend */
+   1910                /* EasyCASE ) */
+   1911                /* Check for Valid Stride Pattern */
+   1912                if (/* Check for Stride Pattern whether it is proper or not i.e. {-1, +1,-1, +1 } or alternate positive and negetive trends ?? */
+   1913                    (p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[0] == -1)&& (p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[1] == 1)&&
+   1914                    (p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[2] == -1)&& (p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[3] == 1))
+   1915                   {
+   1916                   /* EasyCASE ( 101651
+   1917                      Get the Stride Interval by adding the successive trends time counts */
+   1918                   for (v_Index_u8r=0; v_Index_u8r<C_SINGLE_AXIS_TREND_BUFSIZE_U8R; v_Index_u8r++)
+   1919                      {
+   1920                      v_StrideInterval_u8r += p_AccelerationPatternFeatures_xxr->A_AccelSuccecciveTrendTimeBuf_U8X[v_Index_u8r];
+   1921                      }
+   1922                   /* EasyCASE ) */
+   1923                   /*Check whether any discontinuity in the stride patterns by cheking Stride Interval value??*/
+   1924                   if (( v_StrideInterval_u8r > 0 ) && ( v_StrideInterval_u8r < C_STRIDE_INTERVAL_COUNT_MAXLIMIT_U8R ))
+   1925                      {
+   1926                      /* EasyCASE ( 101659
+   1927                         Set V_ValidStridePatternOccuredFlag_U8X flag and Clear A_AccelTrendBuf_S8X buffer */
+   1928                      /* Set V_ValidStridePatternOccuredFlag_U8X If Stride Pattern don't have any discontinuity */
+   1929                       p_AccelerationPatternFeatures_xxr->V_ValidStridePatternOccuredFlag_U8X=1;
+   1930                      for (v_Index_u8r=1; v_Index_u8r<C_SINGLE_AXIS_TREND_BUFSIZE_U8R; v_Index_u8r++)
+   1931                         {
+   1932                         p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[v_Index_u8r] = 0;
+   1933                         }
+   1934                      /* EasyCASE ) */
+   1935                      /* Check the Trend Peaks whether we are having uniform peaks or not?? */
+   1936                      /* EasyCASE ( 101652
+   1937                         Find the Stride Min, Max and PeakToPeak Values */
+   1938                      v_StrideMinVal_s16r = p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[0];
+   1939                      v_StrideMaxVal_s16r = p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[0];
+   1940                      for (v_Index_u8r=1; v_Index_u8r < C_SINGLE_AXIS_TREND_BUFSIZE_U8R; v_Index_u8r++ /* Find Min-Max */)
+   1941                         {
+   1942                         if (p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[v_Index_u8r]<v_StrideMinVal_s16r)
+   1943                            {
+   1944                            v_StrideMinVal_s16r = p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[v_Index_u8r];
+   1945                            }
+   1946                         else
+   1947                            {
+   1948                            if (p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[v_Index_u8r]>v_StrideMaxVal_s16r)
+   1949                               {
+   1950                               v_StrideMaxVal_s16r = p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[v_Index_u8r];
+   1951                               }
+   1952                            }
+   1953                         }
+   1954                      v_StridePeakToPeakVal_u16r = (v_StrideMaxVal_s16r-v_StrideMinVal_s16r);
+   1955                      /* EasyCASE ) */
+   1956                      /* EasyCASE ( 101658
+   1957                         Check the instantaneous uniformity of strides by checking the ratio of three short peaks with peak-to-peak value of stride */
+   1958                      if (((p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[0]-p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[1])> (C_STRIDE_SHORTPEAK_TO_PP_RATIO_CUTOFF_F32R*v_StridePeakToPeakVal_u16r))&&
+   1959                          ((p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[2]-p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[1]) > (C_STRIDE_SHORTPEAK_TO_PP_RATIO_CUTOFF_F32R*v_StridePeakToPeakVal_u16r))&&
+   1960                          ((p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[2]-p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[3]) > (C_STRIDE_SHORTPEAK_TO_PP_RATIO_CUTOFF_F32R*v_StridePeakToPeakVal_u16r)))
+   1961                         {
+   1962                         /*All three short stride peaks pass the minimum ratio test then this stride is uniform */
+   1963                         v_InstStrideUniformity_u8r = 1;
+   1964                         }
+   1965                      else
+   1966                         {
+   1967                         v_InstStrideUniformity_u8r = 0;
+   1968                         }
+   1969                      /* EasyCASE ) */
+   1970                      /* EasyCASE ( 101653
+   1971                         Update the Stride Peak-To-Peak Value, Stride Interval, Stride Interval Diff, Stride Uniformity Test Result FIFOs */
+   1972                      if (p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X < C_STRIDE_INTERVAL_BUFSIZE_U8R)
+   1973                         {
+   1974                         p_AccelerationPatternFeatures_xxr->A_StridePeakToPeakValBuf_U16X[p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X] = v_StridePeakToPeakVal_u16r;
+   1975                         p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X] = v_StrideInterval_u8r;
+   1976                         p_AccelerationPatternFeatures_xxr->A_UniformityTestBuf_U8X[p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X] = v_InstStrideUniformity_u8r;
+   1977                         p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X++;
+   1978                         if (p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X >1)
+   1979                            {
+   1980                            p_AccelerationPatternFeatures_xxr->A_StrideIntervalDiffBuf_U8X[p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X-2] =                                  
+   1981                            (p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X-1]
+   1982                            -p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X-2]);
+   1983                            }
+   1984                         }
+   1985                      else
+   1986                         {
+   1987                         for (v_Index_u8r=0; v_Index_u8r<(C_STRIDE_INTERVAL_BUFSIZE_U8R-1); v_Index_u8r++)
+   1988                            {
+   1989                            p_AccelerationPatternFeatures_xxr->A_StridePeakToPeakValBuf_U16X[C_STRIDE_INTERVAL_BUFSIZE_U8R-1-v_Index_u8r] = p_AccelerationPatternFeatures_xxr->A_StridePeakToPeakValBuf_U16X[C_STRIDE_INTERVAL_BUFSIZE_U8R-2-v_Index_u8r];
+   1990                            p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[C_STRIDE_INTERVAL_BUFSIZE_U8R-1-v_Index_u8r]       = p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[C_STRIDE_INTERVAL_BUFSIZE_U8R-2-v_Index_u8r];
+   1991                            p_AccelerationPatternFeatures_xxr->A_StrideIntervalDiffBuf_U8X[C_STRIDE_INTERVAL_BUFSIZE_U8R-1-v_Index_u8r]   = p_AccelerationPatternFeatures_xxr->A_StrideIntervalDiffBuf_U8X[C_STRIDE_INTERVAL_BUFSIZE_U8R-2-v_Index_u8r];
+   1992                            p_AccelerationPatternFeatures_xxr->A_UniformityTestBuf_U8X[C_STRIDE_INTERVAL_BUFSIZE_U8R-1-v_Index_u8r]       = p_AccelerationPatternFeatures_xxr->A_UniformityTestBuf_U8X[C_STRIDE_INTERVAL_BUFSIZE_U8R-2-v_Index_u8r];
+   1993                            }
+   1994                         p_AccelerationPatternFeatures_xxr->A_StridePeakToPeakValBuf_U16X[0] = v_StridePeakToPeakVal_u16r;
+   1995                         p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[0]       = v_StrideInterval_u8r;
+   1996                         p_AccelerationPatternFeatures_xxr->A_StrideIntervalDiffBuf_U8X[0]   = (v_StrideInterval_u8r-p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[1]);
+   1997                         p_AccelerationPatternFeatures_xxr->A_UniformityTestBuf_U8X[0]       = v_InstStrideUniformity_u8r;
+   1998                         }
+   1999                      /* EasyCASE ) */
+   2000                      /* EasyCASE ( 101654
+   2001                         Update the Stable Cadence for this particular axis */
+   2002                      for (v_Index_u8r=0; v_Index_u8r <(p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X); v_Index_u8r++)
+   2003                         {
+   2004                         v_Temp_u16r += p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[v_Index_u8r];
+   2005                         }
+   2006                      /* CadenceX100 = 100*(2*Strides/sec) = 100*(2*(1/StrideInterval))= 100*(2*(1/(0.040*AvgStrideIntervalCount)) = (5000/AvgStrideInterval) */
+   2007                      p_AccelerationPatternFeatures_xxr->V_CadenceX100_U16X = (U16)((5000*(p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X))/(F32)v_Temp_u16r);
+   2008                      /* EasyCASE ) */
+   2009                      /* AXIS STABILITY ??-->To decide this check the history of Uniformity Test and Stride Interval Diff Test*/
+   2010                      /* EasyCASE ( 101655
+   2011                         Check the History of Uniformity Test whether it is consistant?? */
+   2012                      for (v_Index_u8r=0; v_Index_u8r<C_STRIDE_INTERVAL_BUFSIZE_U8R; v_Index_u8r++)
+   2013                         {
+   2014                         if (p_AccelerationPatternFeatures_xxr->A_UniformityTestBuf_U8X[v_Index_u8r]==1)
+   2015                            {
+   2016                            v_TestCount_u8r++;
+   2017                            }
+   2018                         }
+   2019                      if (v_TestCount_u8r>=C_AXIS_UNIFORMITY_PASSED_NO_CUTOFF_U8R /* Atleast 4 out of 5 tests should be passed */)
+   2020                         {
+   2021                         v_UniformityTestPassedFlag_u8r=1;
+   2022                         }
+   2023                      else
+   2024                         {
+   2025                         v_UniformityTestPassedFlag_u8r=0;
+   2026                         }
+   2027                      /* EasyCASE ) */
+   2028                      /* EasyCASE ( 101656
+   2029                         Check the History of Stride Interval Difference whether abrupt jumps in StrideInterval or not ?? */
+   2030                      v_TestCount_u8r=0;
+   2031                      for (v_Index_u8r=0; v_Index_u8r<C_STRIDE_INTERVAL_BUFSIZE_U8R; v_Index_u8r++)
+   2032                         {
+   2033                         if ((p_AccelerationPatternFeatures_xxr->A_StrideIntervalDiffBuf_U8X[v_Index_u8r])<C_STRIDE_INTERVAL_DIFF_MAX_LIMIT_U8R)
+   2034                            {
+   2035                            v_TestCount_u8r++;
+   2036                            }
+   2037                         }
+   2038                      if (v_TestCount_u8r>=C_AXIS_STRIDE_INTERVAL_PASSED_NO_CUTOFF_U8R /* Only two fluctuations are allowed in the Stride Interval Difference */)
+   2039                         {
+   2040                         v_StrideIntervalTestPassedFlag_u8r=1;
+   2041                         }
+   2042                      else
+   2043                         {
+   2044                         v_StrideIntervalTestPassedFlag_u8r=0;
+   2045                         }
+   2046                      /* EasyCASE ) */
+   2047                      /* EasyCASE ( 101657
+   2048                         Check whether Uniformity and Stride Interval both tests got passed ?? */
+   2049                      if ((v_UniformityTestPassedFlag_u8r==1)&&(v_StrideIntervalTestPassedFlag_u8r==1))
+   2050                         {
+   2051                         p_AccelerationPatternFeatures_xxr->V_AxisIsStableFlag_U8X = 1;
+   2052                         }
+   2053                      else
+   2054                         {
+   2055                         p_AccelerationPatternFeatures_xxr->V_AxisIsStableFlag_U8X = 0;
+   2056                         }
+   2057                      /* EasyCASE ) */
+   2058                      }
+   2059                   }
+   2060                else
+   2061                   {
+   2062                   /* else of stride pattern check */
+   2063                   }
+   2064                }
+   2065             else
+   2066                {
+   2067                /* else of IF (v_TrendChangeFoundFlag_u8r == 1) */
+   2068                /* Clear V_ValidStridePatternOccuredFlag_U8X flag, if valid stride is not detected */
+   2069                p_AccelerationPatternFeatures_xxr->V_ValidStridePatternOccuredFlag_U8X = 0;
+   2070                }
+   2071             /* EasyCASE ) */
+   2072             }
+   2073          /* EasyCASE ) */
+   2074          /* EasyCASE ( 101614
+   2075             PEDO_Reset_SingleAxisAccelFeatures */
+   2076          /* EasyCASE F */
+   2077          /*******************************************************************************
+   2078           * Description: *//**\brief This function resets the accel pattern parameters for single axis. 
+   2079           *  
+   2080           *
+   2081           *
+   2082           *
+   2083           *  \param
+   2084           *   ts_SingleAxis *p_AccelerationPatternFeatures_xxr --> Structure variable to hold
+   2085           *   the parameters of the single axis acceleration features.
+   2086           *               
+   2087           *    
+   2088           *              
+   2089           *  \return 
+   2090           *     
+   2091           *
+   2092           ******************************************************************************/
+   2093          /* Scheduling:
+   2094           *   Call this function once to Initialize the single axis parameters,
+   2095           *   and every time when activity is stationary to reset the variables.
+   2096           *
+   2097           *
+   2098           * Usage guide:
+   2099           *
+   2100           *
+   2101           * Remarks:
+   2102           *
+   2103           ******************************************************************************/
+   2104          
+   2105          void PEDO_Reset_SingleAxisAccelFeatures(ts_SingleAxis *p_AccelerationPatternFeatures_xxr)//单轴加速度特性
+   2106             {
+   2107             /* EasyCASE ( 101670
+   2108                Local Variable */
+   2109             U8 v_Index_u8r=0;
+   2110             /* EasyCASE ) */
+   2111             /* EasyCASE ( 101671
+   2112                Reset single axis acceleration features Buffers */
+   2113             for (v_Index_u8r=0; v_Index_u8r<C_SINGLE_AXIS_ACCEL_VALUE_BUFSIZE_U8R; v_Index_u8r++)
+   2114                {
+   2115                p_AccelerationPatternFeatures_xxr->A_AccelBuf_S16X[v_Index_u8r]=0;
+   2116                }
+   2117             for (v_Index_u8r=0; v_Index_u8r<C_SINGLE_AXIS_TREND_BUFSIZE_U8R; v_Index_u8r++)
+   2118                {
+   2119                p_AccelerationPatternFeatures_xxr->A_AccelTrendBuf_S8X[v_Index_u8r]=0;
+   2120                p_AccelerationPatternFeatures_xxr->A_AccelTrendValueBuf_S16X[v_Index_u8r]=0; 
+   2121                p_AccelerationPatternFeatures_xxr->A_AccelSuccecciveTrendTimeBuf_U8X[v_Index_u8r]=0;
+   2122                }
+   2123             for (v_Index_u8r=0; v_Index_u8r<C_STRIDE_INTERVAL_BUFSIZE_U8R; v_Index_u8r++)
+   2124                {
+   2125                p_AccelerationPatternFeatures_xxr->A_StridePeakToPeakValBuf_U16X[v_Index_u8r]=0;
+   2126                p_AccelerationPatternFeatures_xxr->A_StrideIntervalBuf_U8X[v_Index_u8r]=0;
+   2127                p_AccelerationPatternFeatures_xxr->A_StrideIntervalDiffBuf_U8X[v_Index_u8r]=0;
+   2128                p_AccelerationPatternFeatures_xxr->A_UniformityTestBuf_U8X[v_Index_u8r]=0;
+   2129                }
+   2130             /* EasyCASE ) */
+   2131             /* EasyCASE ( 101672
+   2132                Reset single axis acceleration features variables */
+   2133             p_AccelerationPatternFeatures_xxr->V_AccelBufDataCount_U8X=0;
+   2134             p_AccelerationPatternFeatures_xxr->V_AccelTrendBufDataCount_U8X=0;
+   2135             p_AccelerationPatternFeatures_xxr->V_StrideIntervalBufDataCount_U8X=0;
+   2136             p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeCount_U8X=0;
+   2137                    
+   2138             p_AccelerationPatternFeatures_xxr->V_InstTrendType_S8X = -1; /* Set default trend as Negetive Trend */
+   2139             p_AccelerationPatternFeatures_xxr->V_ValidStridePatternOccuredFlag_U8X=0;
+   2140             p_AccelerationPatternFeatures_xxr->V_SuccessiveTrendTimeValidityFlag_U8X=0;
+   2141             p_AccelerationPatternFeatures_xxr->V_AxisIsStableFlag_U8X=0;
+   2142             p_AccelerationPatternFeatures_xxr->V_CadenceX100_U16X=0;
+   2143             /* EasyCASE ) */
+   2144             }
+   2145          /* EasyCASE ) */
+   2146          /* EasyCASE ( 101745
+   2147             PEDO_FindDominantAxisOrder */
+   2148          /* EasyCASE F */
+   2149          /*******************************************************************************
+   2150           * Description: *//**\brief This function will be called to get the order of 
+   2151           * dominant axis (Ist, IInd and IIIrd) for X, Y and Z-axis.  
+   2152           * 
+   2153           *
+   2154           *
+   2155           *
+   2156           *  \param
+   2157           *  ts_SingleAxis *p_Xaxis_xxr : Structure pointer to hold X-axis Acceleration features
+   2158           *  ts_SingleAxis *p_Yaxis_xxr : Structure pointer to hold Y-axis Acceleration features
+   2159           *  ts_SingleAxis *p_Zaxis_xxr : Structure pointer to hold Z-axis Acceleration features
+   2160           *  U8 v_Activity_u8r          : User activity type
+   2161           *  U8 *p_IstDomAxis_u8r       : Ist dominating axis
+   2162           *  U8 *p_IIndDomAxis_u8r      : IInd dominating axis
+   2163           *  U8 *p_IIIrdDomAxis_u8r     : IIIrd dominating axis
+   2164           *
+   2165           *
+   2166           *
+   2167           *  \return 
+   2168           *  NONE
+   2169           *            
+   2170           *
+   2171           ******************************************************************************/
+   2172          /* Scheduling: 
+   2173           *  Call this function after updating the features of single axis acceleration by calling
+   2174           *  function "PEDO_Get_SingleAxisAccelFeatures". 
+   2175           *
+   2176           *
+   2177           *
+   2178           * Usage guide:
+   2179           *
+   2180           *
+   2181           * Remarks:
+   2182           *
+   2183           ******************************************************************************/
+   2184          void PEDO_FindDominantAxisOrder( ts_SingleAxis *p_Xaxis_xxr, ts_SingleAxis *p_Yaxis_xxr, ts_SingleAxis *p_Zaxis_xxr,
+   2185                                           U8 v_Activity_u8r, U8 *p_IstDomAxis_u8r, U8 *p_IIndDomAxis_u8r, U8 *p_IIIrdDomAxis_u8r )
+   2186             {
+   2187             /* EasyCASE ( 101757
+   2188                Local Variables */
+   2189             /* EasyCASE < */
+   2190             U8  v_Index_u8r=0, v_Index2_u8r=0;
+   2191             U8  v_AxisBufLength_u8r=3;
+   2192             U8  v_TempU8_u8r=0;
+   2193             U8  v_XaxisDominantCount_u8r=0;
+   2194             U8  v_YaxisDominantCount_u8r=0;
+   2195             U8  v_ZaxisDominantCount_u8r=0;
+   2196             U8  v_IstDomAxisDecidedFlag_u8r=0;
+   2197             
+   2198             U8  a_AxisBuf_u8r[3];
+   2199             U16 a_AxisValBuf_u16r[3];
+   2200             U16 v_Temp_u16r=0;
+   2201             
+   2202             /* Reset the variable Again when ACTIVITY is STATIONARY */
+   2203             static U8 v_DomAxisBufPacketCount_u8r=0;   
+   2204             static U8 v_IstDomAxisBuf_u8r[C_DOMINATING_AXIS_BUFSIZE_U8R]  ={0}; 
+   2205             static U8 v_IIndDomAxisBuf_u8r[C_DOMINATING_AXIS_BUFSIZE_U8R] ={0};
+   2206             /* EasyCASE > */
+   2207             /* EasyCASE ) */
+   2208             /* EasyCASE ( 101761
+   2209                Clear the v_DomAxisBufPacketCount_u8r when ACTIVITY == STATIONARY */
+   2210             if (v_Activity_u8r == STATIONARY)
+   2211                {
+   2212                v_DomAxisBufPacketCount_u8r=0;
+   2213                }
+   2214             /* EasyCASE ) */
+   2215             /* EasyCASE ( 101762
+   2216                Assign values to AxisBuf ( 0=X_Axis; 1=Y_Axis; 2=Z_Axis ) and AxisValueBuf ( Stride Peak-to-Peak Value ) */
+   2217             a_AxisBuf_u8r[0] = C_Xaxis_U8X; /* X-Axis */
+   2218             a_AxisBuf_u8r[1] = C_Yaxis_U8X; /* Y-Axis */
+   2219             a_AxisBuf_u8r[2] = C_Zaxis_U8X; /* Z-Axis */
+   2220             
+   2221             a_AxisValBuf_u16r[0] = p_Xaxis_xxr->A_StridePeakToPeakValBuf_U16X[0]; /* X-Axis Stride Peak-to-Peak Value */
+   2222             a_AxisValBuf_u16r[1] = p_Yaxis_xxr->A_StridePeakToPeakValBuf_U16X[0]; /* Y-Axis Stride Peak-to-Peak Value */
+   2223             a_AxisValBuf_u16r[2] = p_Zaxis_xxr->A_StridePeakToPeakValBuf_U16X[0]; /* Z-Axis Stride Peak-to-Peak Value */
+   2224             /* EasyCASE ) */
+   2225             /* EasyCASE ( 101763
+   2226                Sort the Stride Peak-To-Peak values in Descending Order */
+   2227             for (v_Index_u8r = 0; v_Index_u8r < (v_AxisBufLength_u8r-1); v_Index_u8r++)
+   2228                {
+   2229                for (v_Index2_u8r = (v_Index_u8r+1); v_Index2_u8r < v_AxisBufLength_u8r; v_Index2_u8r++)
+   2230                   {
+   2231                   if (a_AxisValBuf_u16r[v_Index_u8r] < a_AxisValBuf_u16r[v_Index2_u8r])
+   2232                      {
+   2233                      /* Swap the Axis */
+   2234                      v_TempU8_u8r = a_AxisBuf_u8r[v_Index_u8r];
+   2235                      a_AxisBuf_u8r[v_Index_u8r] = a_AxisBuf_u8r[v_Index2_u8r];
+   2236                      a_AxisBuf_u8r[v_Index2_u8r] = v_TempU8_u8r; 
+   2237                      
+   2238                      /* Swap the Axis Values */
+   2239                      v_Temp_u16r = a_AxisValBuf_u16r[v_Index_u8r];
+   2240                      a_AxisValBuf_u16r[v_Index_u8r] = a_AxisValBuf_u16r[v_Index2_u8r];
+   2241                      a_AxisValBuf_u16r[v_Index2_u8r] = v_Temp_u16r;
+   2242                      }
+   2243                   else
+   2244                      {
+   2245                      if (a_AxisValBuf_u16r[v_Index_u8r] == a_AxisValBuf_u16r[v_Index2_u8r])
+   2246                         {
+   2247                         /* Axis with less index will be given more priority in the descending order */
+   2248                         if (a_AxisBuf_u8r[v_Index_u8r] > a_AxisBuf_u8r[v_Index2_u8r])
+   2249                            {
+   2250                            /* Swap the Axis */
+   2251                            v_TempU8_u8r = a_AxisBuf_u8r[v_Index_u8r];
+   2252                            a_AxisBuf_u8r[v_Index_u8r] = a_AxisBuf_u8r[v_Index2_u8r];
+   2253                            a_AxisBuf_u8r[v_Index2_u8r] = v_TempU8_u8r; 
+   2254                            
+   2255                            /* Swap the Axis Values */
+   2256                            v_Temp_u16r = a_AxisValBuf_u16r[v_Index_u8r];
+   2257                            a_AxisValBuf_u16r[v_Index_u8r] = a_AxisValBuf_u16r[v_Index2_u8r];
+   2258                            a_AxisValBuf_u16r[v_Index2_u8r] = v_Temp_u16r;
+   2259                            }
+   2260                         }
+   2261                      }
+   2262                   }
+   2263                }
+   2264             /* EasyCASE ) */
+   2265             if (v_DomAxisBufPacketCount_u8r < C_DOMINATING_AXIS_BUFSIZE_U8R)
+   2266                {
+   2267                /* EasyCASE ( 101775
+   2268                   Keep default dominating axis as COMPOSITE AXIS for first 5 Strides,
+   2269                   untill Ist and IInd dominating axis FIFOs are filled. */
+   2270                v_IstDomAxisBuf_u8r[v_DomAxisBufPacketCount_u8r]  = a_AxisBuf_u8r[0];
+   2271                v_IIndDomAxisBuf_u8r[v_DomAxisBufPacketCount_u8r] = a_AxisBuf_u8r[1];
+   2272                v_DomAxisBufPacketCount_u8r++;
+   2273                
+   2274                /* Keep default dominating axis as composite axis for Ist 5 Strides untill Ist and IInd dominating axis FIFOs are filled*/ 
+   2275                *p_IstDomAxis_u8r = C_CompositeAxis_U8X;
+   2276                *p_IIndDomAxis_u8r = C_CompositeAxis_U8X;
+   2277                *p_IIIrdDomAxis_u8r = C_CompositeAxis_U8X;
+   2278                /* EasyCASE ) */
+   2279                }
+   2280             else
+   2281                {
+   2282                /* EasyCASE ( 101776
+   2283                   Find dominating axis order */
+   2284                /* EasyCASE ( 101766
+   2285                   Update the Ist and IInd dominant axis FIFOs */
+   2286                for (v_Index_u8r=0; v_Index_u8r<(C_DOMINATING_AXIS_BUFSIZE_U8R-1); v_Index_u8r++)
+   2287                   {
+   2288                   v_IstDomAxisBuf_u8r[C_DOMINATING_AXIS_BUFSIZE_U8R-1-v_Index_u8r]   = v_IstDomAxisBuf_u8r[C_DOMINATING_AXIS_BUFSIZE_U8R-2-v_Index_u8r];
+   2289                   v_IIndDomAxisBuf_u8r[C_DOMINATING_AXIS_BUFSIZE_U8R-1-v_Index_u8r]  = v_IIndDomAxisBuf_u8r[C_DOMINATING_AXIS_BUFSIZE_U8R-2-v_Index_u8r];
+   2290                   }
+   2291                v_IstDomAxisBuf_u8r[0]  = a_AxisBuf_u8r[0];
+   2292                v_IIndDomAxisBuf_u8r[0] = a_AxisBuf_u8r[1];
+   2293                /* EasyCASE ) */
+   2294                /* Find The Stable Ist, IInd and IIIrd dominating axis ?? */
+   2295                /* EasyCASE ( 101767
+   2296                   Count the no. of Ist dominant occurances for X, Y and Z-axis out of 5?? */
+   2297                for (v_Index_u8r = 0; v_Index_u8r < C_DOMINATING_AXIS_BUFSIZE_U8R; v_Index_u8r++)
+   2298                   {
+   2299                   if (v_IstDomAxisBuf_u8r[v_Index_u8r]==C_Xaxis_U8X)
+   2300                      {
+   2301                      v_XaxisDominantCount_u8r++;
+   2302                      }
+   2303                   else
+   2304                      {
+   2305                      if (v_IstDomAxisBuf_u8r[v_Index_u8r]==C_Yaxis_U8X)
+   2306                         {
+   2307                         v_YaxisDominantCount_u8r++;
+   2308                         }
+   2309                      else
+   2310                         {
+   2311                         if (v_IstDomAxisBuf_u8r[v_Index_u8r]==C_Zaxis_U8X)
+   2312                            {
+   2313                            v_ZaxisDominantCount_u8r++;
+   2314                            }
+   2315                         }
+   2316                      }
+   2317                   }
+   2318                /* EasyCASE ) */
+   2319                /* EasyCASE ( 101769
+   2320                   Decide Ist Dominating Axis ?? */
+   2321                if (v_XaxisDominantCount_u8r>=C_NO_DOMINANT_AXIS_OCC_MIN_LIMIT)
+   2322                   {
+   2323                   *p_IstDomAxis_u8r = C_Xaxis_U8X; 
+   2324                    v_IstDomAxisDecidedFlag_u8r=1;
+   2325                   }
+   2326                else
+   2327                   {
+   2328                   if (v_YaxisDominantCount_u8r>=C_NO_DOMINANT_AXIS_OCC_MIN_LIMIT)
+   2329                      {
+   2330                      *p_IstDomAxis_u8r = C_Yaxis_U8X; 
+   2331                       v_IstDomAxisDecidedFlag_u8r=1;
+   2332                      }
+   2333                   else
+   2334                      {
+   2335                      if (v_ZaxisDominantCount_u8r>=C_NO_DOMINANT_AXIS_OCC_MIN_LIMIT)
+   2336                         {
+   2337                         *p_IstDomAxis_u8r = C_Zaxis_U8X; 
+   2338                          v_IstDomAxisDecidedFlag_u8r=1;
+   2339                         }
+   2340                      }
+   2341                   }
+   2342                /* EasyCASE ) */
+   2343                if (v_IstDomAxisDecidedFlag_u8r ==1)
+   2344                   {
+   2345                   /* EasyCASE ( 101771
+   2346                      Count the no of IInd dominant occurances for X, Y and Z-axis out of 5?? */
+   2347                   for (v_Index_u8r = 0; v_Index_u8r < C_DOMINATING_AXIS_BUFSIZE_U8R; v_Index_u8r++)
+   2348                      {
+   2349                      if (v_IIndDomAxisBuf_u8r[v_Index_u8r]==C_Xaxis_U8X)
+   2350                         {
+   2351                         v_XaxisDominantCount_u8r++;
+   2352                         }
+   2353                      else
+   2354                         {
+   2355                         if (v_IIndDomAxisBuf_u8r[v_Index_u8r]==C_Yaxis_U8X)
+   2356                            {
+   2357                            v_YaxisDominantCount_u8r++;
+   2358                            }
+   2359                         else
+   2360                            {
+   2361                            if (v_IIndDomAxisBuf_u8r[v_Index_u8r]==C_Zaxis_U8X)
+   2362                               {
+   2363                               v_ZaxisDominantCount_u8r++;
+   2364                               }
+   2365                            }
+   2366                         }
+   2367                      }
+   2368                   /* EasyCASE ) */
+   2369                   /* Decide IInd and IIrd Dominating Axis ?? */
+   2370                   if (*p_IstDomAxis_u8r == C_Xaxis_U8X)
+   2371                      {
+   2372                      /* EasyCASE ( 101772
+   2373                         Decide IInd and IIIrd dominating axis among Y and Z axis ? */
+   2374                      if (v_YaxisDominantCount_u8r >= v_ZaxisDominantCount_u8r)
+   2375                         {
+   2376                         *p_IIndDomAxis_u8r  = C_Yaxis_U8X;
+   2377                         *p_IIIrdDomAxis_u8r = C_Zaxis_U8X;
+   2378                         }
+   2379                      else
+   2380                         {
+   2381                         *p_IIndDomAxis_u8r  = C_Zaxis_U8X;
+   2382                         *p_IIIrdDomAxis_u8r = C_Yaxis_U8X;
+   2383                         }
+   2384                      /* EasyCASE ) */
+   2385                      }
+   2386                   else
+   2387                      {
+   2388                      if (*p_IstDomAxis_u8r == C_Yaxis_U8X)
+   2389                         {
+   2390                         /* EasyCASE ( 101773
+   2391                            Decide IInd and IIIrd dominating axis among X and Y axis ? */
+   2392                         if (v_XaxisDominantCount_u8r >= v_ZaxisDominantCount_u8r)
+   2393                            {
+   2394                            *p_IIndDomAxis_u8r  = C_Xaxis_U8X;
+   2395                            *p_IIIrdDomAxis_u8r = C_Zaxis_U8X;
+   2396                            }
+   2397                         else
+   2398                            {
+   2399                            *p_IIndDomAxis_u8r  = C_Zaxis_U8X;
+   2400                            *p_IIIrdDomAxis_u8r = C_Xaxis_U8X;
+   2401                            }
+   2402                         /* EasyCASE ) */
+   2403                         }
+   2404                      else
+   2405                         {
+   2406                         if (*p_IstDomAxis_u8r == C_Zaxis_U8X)
+   2407                            {
+   2408                            /* EasyCASE ( 101774
+   2409                               Decide IInd and IIIrd dominating axis among X and Y axis ? */
+   2410                            if (v_XaxisDominantCount_u8r >= v_YaxisDominantCount_u8r)
+   2411                               {
+   2412                               *p_IIndDomAxis_u8r  = C_Xaxis_U8X;
+   2413                               *p_IIIrdDomAxis_u8r = C_Yaxis_U8X;
+   2414                               }
+   2415                            else
+   2416                               {
+   2417                               *p_IIndDomAxis_u8r  = C_Yaxis_U8X;
+   2418                               *p_IIIrdDomAxis_u8r = C_Xaxis_U8X;
+   2419                               }
+   2420                            /* EasyCASE ) */
+   2421                            }
+   2422                         }
+   2423                      }
+   2424                   }
+   2425                /* EasyCASE ) */
+   2426                }
+   2427             }
+   2428          /* EasyCASE ) */
+   2429          /* EasyCASE ( 101747
+   2430             PEDO_Find_StableSingleAxis_StableCadenceX100 */
+   2431          /* EasyCASE F */
+   2432          /*******************************************************************************
+   2433           * Description: *//**\brief This function will be called to find the single stable axis
+   2434           *                          and stable cadence of that axis. 
+   2435           *  
+   2436           *
+   2437           *
+   2438           *
+   2439           *  \param
+   2440           *   ts_SingleAxis *p_Xaxis_xxr    : Structure pointer to hold X-axis Acceleration features
+   2441           *   ts_SingleAxis *p_Yaxis_xxr    : Structure pointer to hold Y-axis Acceleration features
+   2442           *   ts_SingleAxis *p_Zaxis_xxr    : Structure pointer to hold Z-axis Acceleration features
+   2443           *   ts_SingleAxis *p_Caxis_xxr    : Structure pointer to hold Composite-axis Acceleration
+   2444           *                                   features
+   2445           *   U8 v_IstDomAxis_u8r           : Ist dominant axis
+   2446           *   U8 v_IIndDomAxis_u8r          : IInd dominant axis
+   2447           *   U8 v_Activity_u8r             : User activity type
+   2448           *   U8  *p_StableAxis_u8r         : Stable axis ( X, Y, Z or Composite axis )
+   2449           *   U16 *p_StableCadenceX100_u16r : Stable Cadence of stable axis
+   2450           *              
+   2451           *     
+   2452           *               
+   2453           *  \return 
+   2454           *   NONE
+   2455           *  
+   2456           *
+   2457           ******************************************************************************/
+   2458          /* Scheduling:
+   2459           * Call the function every 40 msec cycle
+   2460           *
+   2461           *
+   2462           * Usage guide:
+   2463           *
+   2464           *
+   2465           * Remarks:
+   2466           *
+   2467           ******************************************************************************/
+   2468          
+   2469           void PEDO_Find_StableSingleAxis_StableCadenceX100( ts_SingleAxis *p_Xaxis_xxr, ts_SingleAxis *p_Yaxis_xxr, ts_SingleAxis *p_Zaxis_xxr, ts_SingleAxis *p_Caxis_xxr,
+   2470                                                              U8 v_IstDomAxis_u8r, U8 v_IIndDomAxis_u8r, U8 v_Activity_u8r, U8 *p_StableAxis_u8r, U16 *p_StableCadenceX100_u16r )
+   2471             {
+   2472             /* EasyCASE ( 101748
+   2473                Local Variables */
+   2474             //   U8 v_Index_u8r=0;
+   2475                static U8 v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2476                static U16 v_LocalStableCadenceX100_u16r=0;
+   2477             //   U16 v_Temp_u16r=0;
+   2478             /* EasyCASE ) */
+   2479             /* EasyCASE ( 101749
+   2480                Check whether activity is STATIONARY ? 
+   2481                IF-->YES, (1) Set Stable axis to Composite axis as default
+   2482                          (2) Clear stable axis cadence */
+   2483             if (v_Activity_u8r==STATIONARY)
+   2484                {
+   2485                v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2486                v_LocalStableCadenceX100_u16r = 0;
+   2487                }
+   2488             /* EasyCASE ) */
+   2489             /* EasyCASE ( 101750
+   2490                Find Stable Axis */
+   2491             /* CASE1 : CURRENT STABLE AXIS = COMPOSITE AXIS && STATUS == UNSTABLE */
+   2492             if ((v_LocalStableAxis_u8r == C_CompositeAxis_U8X)&&(p_Caxis_xxr->V_AxisIsStableFlag_U8X == UNSTABLE))
+   2493                {
+   2494                /* EasyCASE ( 101751
+   2495                   Check whether COMPOSITE_AXIS == UNSTABLE ? */
+   2496                /* Check Ist dominating axis stability */
+   2497                if ((v_IstDomAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2498                   {
+   2499                   v_LocalStableAxis_u8r = C_Xaxis_U8X;
+   2500                   }
+   2501                else
+   2502                   {
+   2503                   if ((v_IstDomAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2504                      {
+   2505                      v_LocalStableAxis_u8r = C_Yaxis_U8X;
+   2506                      }
+   2507                   else
+   2508                      {
+   2509                      if ((v_IstDomAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2510                         {
+   2511                         v_LocalStableAxis_u8r = C_Zaxis_U8X;
+   2512                         }
+   2513                      else
+   2514                         {
+   2515                         /* Check IInd dominating axis stability */
+   2516                         if ((v_IIndDomAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2517                            {
+   2518                            v_LocalStableAxis_u8r = C_Xaxis_U8X;
+   2519                            }
+   2520                         else
+   2521                            {
+   2522                            if ((v_IIndDomAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2523                               {
+   2524                               v_LocalStableAxis_u8r = C_Yaxis_U8X;
+   2525                               }
+   2526                            else
+   2527                               {
+   2528                               if ((v_IIndDomAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2529                                  {
+   2530                                  v_LocalStableAxis_u8r = C_Zaxis_U8X;
+   2531                                  }
+   2532                               else
+   2533                                  {
+   2534                                  /* Keep it Composite axis only */
+   2535                                  /* EasyCASE - */
+   2536                                  v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2537                                  }
+   2538                               }
+   2539                            }
+   2540                         }
+   2541                      }
+   2542                   }
+   2543                /* EasyCASE ) */
+   2544                }
+   2545             else
+   2546                {
+   2547                /* CASE2 : CURRENT STABLE AXIS = X-AXIS && STATUS == UNSTABLE */
+   2548                if ((v_LocalStableAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == UNSTABLE))
+   2549                   {
+   2550                   /* EasyCASE ( 101752
+   2551                      Check whether X_AXIS == UNSTABLE ? */
+   2552                   /* Check Composite Axis stability */
+   2553                   if (p_Caxis_xxr->V_AxisIsStableFlag_U8X == STABLE)
+   2554                      {
+   2555                      v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2556                      }
+   2557                   else
+   2558                      {
+   2559                      /* Check Ist dominant axis stability  */
+   2560                      if ((v_IstDomAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2561                         {
+   2562                         v_LocalStableAxis_u8r = C_Yaxis_U8X;
+   2563                         }
+   2564                      else
+   2565                         {
+   2566                         if ((v_IstDomAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2567                            {
+   2568                            v_LocalStableAxis_u8r = C_Zaxis_U8X;
+   2569                            }
+   2570                         else
+   2571                            {
+   2572                            /* Check IInd dominating axis stability */
+   2573                            if ((v_IIndDomAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2574                               {
+   2575                               v_LocalStableAxis_u8r = C_Yaxis_U8X;
+   2576                               }
+   2577                            else
+   2578                               {
+   2579                               if ((v_IIndDomAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2580                                  {
+   2581                                  v_LocalStableAxis_u8r = C_Zaxis_U8X;
+   2582                                  }
+   2583                               else
+   2584                                  {
+   2585                                  /* Keep it Composite axis only */
+   2586                                  /* EasyCASE - */
+   2587                                  v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2588                                  }
+   2589                               }
+   2590                            }
+   2591                         }
+   2592                      }
+   2593                   /* EasyCASE ) */
+   2594                   }
+   2595                else
+   2596                   {
+   2597                   /* CASE3 : CURRENT STABLE AXIS = Y-AXIS && STATUS == UNSTABLE */
+   2598                   if ((v_LocalStableAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == UNSTABLE))
+   2599                      {
+   2600                      /* EasyCASE ( 101753
+   2601                         Check whether Y_AXIS == UNSTABLE ? */
+   2602                      /* Check Composite Axis stability */
+   2603                      if (p_Caxis_xxr->V_AxisIsStableFlag_U8X == STABLE)
+   2604                         {
+   2605                         v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2606                         }
+   2607                      else
+   2608                         {
+   2609                         /* Check Ist dominant axis stability  */
+   2610                         if ((v_IstDomAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2611                            {
+   2612                            v_LocalStableAxis_u8r = C_Xaxis_U8X;
+   2613                            }
+   2614                         else
+   2615                            {
+   2616                            if ((v_IstDomAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2617                               {
+   2618                               v_LocalStableAxis_u8r = C_Zaxis_U8X;
+   2619                               }
+   2620                            else
+   2621                               {
+   2622                               /* Check IInd dominating axis stability */
+   2623                               if ((v_IIndDomAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2624                                  {
+   2625                                  v_LocalStableAxis_u8r = C_Xaxis_U8X;
+   2626                                  }
+   2627                               else
+   2628                                  {
+   2629                                  if ((v_IIndDomAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2630                                     {
+   2631                                     v_LocalStableAxis_u8r = C_Zaxis_U8X;
+   2632                                     }
+   2633                                  else
+   2634                                     {
+   2635                                     /* Keep it Composite axis only */
+   2636                                     /* EasyCASE - */
+   2637                                     v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2638                                     }
+   2639                                  }
+   2640                               }
+   2641                            }
+   2642                         }
+   2643                      /* EasyCASE ) */
+   2644                      }
+   2645                   else
+   2646                      {
+   2647                      /* CASE4 : CURRENT STABLE AXIS = Z-AXIS && STATUS == UNSTABLE */
+   2648                      if ((v_LocalStableAxis_u8r == C_Zaxis_U8X)&&(p_Zaxis_xxr->V_AxisIsStableFlag_U8X == UNSTABLE))
+   2649                         {
+   2650                         /* EasyCASE ( 101754
+   2651                            Check whether Z_AXIS == UNSTABLE ? */
+   2652                         /* Check Composite Axis stability */
+   2653                         if (p_Caxis_xxr->V_AxisIsStableFlag_U8X == STABLE)
+   2654                            {
+   2655                            v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2656                            }
+   2657                         else
+   2658                            {
+   2659                            /* Check Ist dominant axis stability  */
+   2660                            if ((v_IstDomAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2661                               {
+   2662                               v_LocalStableAxis_u8r = C_Xaxis_U8X;
+   2663                               }
+   2664                            else
+   2665                               {
+   2666                               if ((v_IstDomAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2667                                  {
+   2668                                  v_LocalStableAxis_u8r = C_Yaxis_U8X;
+   2669                                  }
+   2670                               else
+   2671                                  {
+   2672                                  /* Check IInd dominating axis stability */
+   2673                                  if ((v_IIndDomAxis_u8r == C_Xaxis_U8X)&&(p_Xaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2674                                     {
+   2675                                     v_LocalStableAxis_u8r = C_Xaxis_U8X;
+   2676                                     }
+   2677                                  else
+   2678                                     {
+   2679                                     if ((v_IIndDomAxis_u8r == C_Yaxis_U8X)&&(p_Yaxis_xxr->V_AxisIsStableFlag_U8X == STABLE))
+   2680                                        {
+   2681                                        v_LocalStableAxis_u8r = C_Yaxis_U8X;
+   2682                                        }
+   2683                                     else
+   2684                                        {
+   2685                                        /* Keep it Composite axis only */
+   2686                                        /* EasyCASE - */
+   2687                                        v_LocalStableAxis_u8r = C_CompositeAxis_U8X;
+   2688                                        }
+   2689                                     }
+   2690                                  }
+   2691                               }
+   2692                            }
+   2693                         /* EasyCASE ) */
+   2694                         }
+   2695                      }
+   2696                   }
+   2697                }
+   2698             /* Copy the local stable axis */
+   2699                *p_StableAxis_u8r = v_LocalStableAxis_u8r;
+   2700             /* EasyCASE ) */
+   2701             /* EasyCASE ( 101755
+   2702                Find the Stable Cadence */
+   2703             switch (v_LocalStableAxis_u8r)
+   2704                {
+   2705                case C_Xaxis_U8X:
+   2706                   *p_StableCadenceX100_u16r = p_Xaxis_xxr->V_CadenceX100_U16X;
+   2707                   break;
+   2708                case C_Yaxis_U8X:
+   2709                   *p_StableCadenceX100_u16r = p_Yaxis_xxr->V_CadenceX100_U16X;
+   2710                   break;
+   2711                case C_Zaxis_U8X:
+   2712                   *p_StableCadenceX100_u16r = p_Zaxis_xxr->V_CadenceX100_U16X;
+   2713                   break;
+   2714                default:
+   2715                   *p_StableCadenceX100_u16r = p_Caxis_xxr->V_CadenceX100_U16X;
+   2716                   break;
+   2717                }
+   2718             /* EasyCASE ) */
+   2719             }
+   2720          /* EasyCASE ) */
+   2721          /* EasyCASE ) */
+   2722          /* EasyCASE ) */
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      40  ?_0
+      48  A_Raw_AccelC_S16R
+      48  A_Raw_AccelX_S16R
+      48  A_Raw_AccelY_S16R
+      48  A_Raw_AccelZ_S16R
+      20  A_TempActivityBuffer_U8R
+      20  A_TempP2PCountBuffer_U8R
+      20  A_TempS2SCountBuffer_U8R
+      67  ExtraVar
+      19  PEDO_DisableRobustness
+      19  PEDO_EnableRobustness
+    1023  PEDO_FindDominantAxisOrder
+     631  PEDO_Find_StableSingleAxis_StableCadenceX100
+      13  PEDO_GetAbsoluteShort
+       4  PEDO_GetActivity
+       4  PEDO_GetBandwidthSwitchInfo
+       9  PEDO_GetStepCount
+    1690  PEDO_Get_SingleAxisAccelFeatures
+     104  PEDO_InitAlgo
+     445  PEDO_MedianFilter
+    2859  PEDO_ProcessAccelarationData
+      85  PEDO_ResetAlgo
+      25  PEDO_ResetStepCount
+     238  PEDO_Reset_SingleAxisAccelFeatures
+       4  PEDO_SetInterStepCount
+      17  PEDO_StartDetection
+       9  PEDO_StopDetection
+     111  PEDO_TrendFinder
+      10  S_ObjCadence
+      10  S_ObjSpeed
+      57  S_Param_Caxis
+      57  S_Param_Xaxis
+      57  S_Param_Yaxis
+      57  S_Param_Zaxis
+       1  V_ActivityDetected_U8R
+       1  V_ActivityInstateneous_U8R
+       1  V_Activity_U8R
+       1  V_AxisSelectFlag_U8R
+       1  V_CHIPIDCHECK_U8R
+       2  V_CompositeAxis_CadenceX100_U16R
+       2  V_CompositeAxis_StrideRatio_U16R
+       4  V_CurrentDist_F32R
+       1  V_DivideFactor_U8R
+       1  V_InterStepCountLimit_U8R
+       1  V_InterStepCount_U8R
+       1  V_LazyWalkLowerLimit_U8R
+       2  V_MovAvgStableCadenceX100_U16R
+       1  V_PreActivity_U8R
+       1  V_SampleCountForCycle_U8R
+       2  V_SingleAxisStableCadence_U16R
+       1  V_StatusFlags_U8R
+       2  V_StepCount_U16R
+       1  V_TempFIFOSize_U8R
+      16  a_AvgActivityDetectionRatioBuf_u16r
+      48  gc_CompositeFilterCoeff
+      48  gc_HighSpeedFilterCoeff
+       1  v_CaxisStrideDetectedFlag_u8r
+       1  v_CorrectionCount_u8r
+       1  v_CountStepToStepPrev1_u8r
+       1  v_CountStepToStepPrev2_u8r
+       1  v_CountStepToStep_u8r
+       1  v_CurrTrend_s8r
+       1  v_DomAxisBufPacketCount_u8r
+       1  v_ErrorCount_u8r
+       5  v_IIndDomAxisBuf_u8r
+       5  v_IstDomAxisBuf_u8r
+       1  v_LocalStableAxis_u8r
+       2  v_LocalStableCadenceX100_u16r
+       1  v_ModeTimeoutCount_u8r
+       2  v_NegTrendAccelVal_s16r
+       1  v_PreStatusFlags_u8r
+       2  v_Prev1AccelVal_s16r
+       2  v_Prev2AccelVal_s16r
+       2  v_PrevPosNegTrendAccelValDiff_s16r
+       1  v_PreviousActivity_u8r
+       1  v_TrendDominantAxis_u8r
+       1  v_XaxisStrideDetectedFlag_u8r
+       1  v_YaxisStrideDetectedFlag_u8r
+       1  v_ZaxisStrideDetectedFlag_u8r
+
+ 
+ 7 309 bytes in section .far_func.text
+   636 bytes in section .near.bss
+    10 bytes in section .near.data
+   136 bytes in section .near.rodata
+ 
+ 7 309 bytes of CODE  memory
+   136 bytes of CONST memory
+   646 bytes of DATA  memory
+
+Errors: none
+Warnings: 2

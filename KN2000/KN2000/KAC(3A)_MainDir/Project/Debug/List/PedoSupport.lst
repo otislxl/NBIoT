@@ -1,0 +1,706 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:09:23
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\PedoSupport.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\PedoSupport.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\PedoSupport.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\PedoSupport.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\PedoSupport.c
+      1          /* EasyCASE V6.5 13/01/2011 10:38:01 */
+      2          /* EasyCASE O
+      3          If=vertical
+      4          LevelNumbers=no
+      5          LineNumbers=no
+      6          Colors=16777215,0,12582912,12632256,0,0,0,16711680,8388736,0,33023,32768,0,0,0,0,0,32768,12632256,255,65280,255,255,16711935
+      7          ScreenFont=Courier New,Standard,80,4,-11,0,400,0,0,0,0,0,0,3,2,1,49,96,96
+      8          PrinterFont=Courier New,,80,4,-66,0,400,0,0,0,0,0,0,3,2,1,49,600,600
+      9          LastLevelId=101034 */
+     10          /* EasyCASE ( 1
+     11             PedoSupport.c */
+     12          /***************************************************************************************************
+     13           *
+     14           * (C) All rights reserved by ROBERT BOSCH GMBH
+     15           *
+     16           **************************************************************************************************/
+     17          /*  $Date: 2010/07/06
+     18           *  $Revision: 1.0 $
+     19           *
+     20           */
+     21          
+     22          /**************************************************************************************************
+     23          * Copyright (C) 2010 Bosch Sensortec GmbH
+     24          *
+     25          * PedoSupport.c
+     26          *
+     27          * Usage: This File contains APIs to support the "Pedometer.c" file.
+     28          *                
+     29          *
+     30          * Author: Kamal.Joshi@in.bosch.com & Rajender.Singh@in.bosch.com
+     31          **************************************************************************************************/
+     32          /* EasyCASE ( 5
+     33             Disclaimer */
+     34          /*************************************************************************************************/
+     35          /*  Disclaimer
+     36          *
+     37          * Common:
+     38          * Bosch Sensortec products are developed for the consumer goods industry. They may only be used
+     39          * within the parameters of the respective valid product data sheet.  Bosch Sensortec products are
+     40          * provided with the express understanding that there is no warranty of fitness for a particular purpose.
+     41          * They are not fit for use in life-sustaining, safety or security sensitive systems or any system or device
+     42          * that may lead to bodily harm or property damage if the system or device malfunctions. In addition,
+     43          * Bosch Sensortec products are not fit for use in products which interact with motor vehicle systems.
+     44          * The resale and/or use of products are at the purchaser’s own risk and his own responsibility. The
+     45          * examination of fitness for the intended use is the sole responsibility of the Purchaser.
+     46          *
+     47          * The purchaser shall indemnify Bosch Sensortec from all third party claims, including any claims for
+     48          * incidental, or consequential damages, arising from any product use not covered by the parameters of
+     49          * the respective valid product data sheet or not approved by Bosch Sensortec and reimburse Bosch
+     50          * Sensortec for all costs in connection with such claims.
+     51          *
+     52          * The purchaser must monitor the market for the purchased products, particularly with regard to
+     53          * product safety and inform Bosch Sensortec without delay of all security relevant incidents.
+     54          *
+     55          * Engineering Samples are marked with an asterisk (*) or (e). Samples may vary from the valid
+     56          * technical specifications of the product series. They are therefore not intended or fit for resale to third
+     57          * parties or for use in end products. Their sole purpose is internal client testing. The testing of an
+     58          * engineering sample may in no way replace the testing of a product series. Bosch Sensortec
+     59          * assumes no liability for the use of engineering samples. By accepting the engineering samples, the
+     60          * Purchaser agrees to indemnify Bosch Sensortec from all claims arising from the use of engineering
+     61          * samples.
+     62          *
+     63          * Special:
+     64          * This software module (hereinafter called "Software") and any information on application-sheets
+     65          * (hereinafter called "Information") is provided free of charge for the sole purpose to support your
+     66          * application work. The Software and Information is subject to the following terms and conditions:
+     67          *
+     68          * The Software is specifically designed for the exclusive use for Bosch Sensortec products by
+     69          * personnel who have special experience and training. Do not use this Software if you do not have the
+     70          * proper experience or training.
+     71          *
+     72          * This Software package is provided `` as is `` and without any expressed or implied warranties,
+     73          * including without limitation, the implied warranties of merchantability and fitness for a particular
+     74          * purpose.
+     75          *
+     76          * Bosch Sensortec and their representatives and agents deny any liability for the functional impairment
+     77          * of this Software in terms of fitness, performance and safety. Bosch Sensortec and their
+     78          * representatives and agents shall not be liable for any direct or indirect damages or injury, except as
+     79          * otherwise stipulated in mandatory applicable law.
+     80          *
+     81          * The Information provided is believed to be accurate and reliable. Bosch Sensortec assumes no
+     82          * responsibility for the consequences of use of such Information nor for any infringement of patents or
+     83          * other rights of third parties which may result from its use. No license is granted by implication or
+     84          * otherwise under any patent or patent rights of Bosch. Specifications mentioned in the Information are
+     85          * subject to change without notice.
+     86          *
+     87          * It is not allowed to deliver the source code of the Software to any third party without permission of
+     88          * Bosch Sensortec.
+     89          */
+     90          /*************************************************************************************************/
+     91          /* EasyCASE ) */
+     92          /* EasyCASE ( 100012
+     93             File Name For Doxy */
+     94          /*! \file PedoSupport.c
+     95              \brief  This File contains APIs to support the Pedometer.c file. */
+     96          /* EasyCASE ) */
+     97          /* EasyCASE ( 247
+     98             Includes */
+     99          /* EasyCASE ( 912
+    100             Standard includes */
+    101          /* EasyCASE = */
+    102          /* EasyCASE ) */
+    103          /* EasyCASE ( 100013
+    104             Module Includes */
+    105          #include "define.h"
+    106          #include "PedoSupport.h"
+    107          /* EasyCASE ) */
+    108          /* EasyCASE ) */
+    109          /* EasyCASE ( 63
+    110             Local Declarations and Definitions */
+    111          /* EasyCASE ( 322
+    112             Protected Data Interfaces (PDIs) */
+    113          /* EasyCASE ) */
+    114          /* EasyCASE ( 251
+    115             #Define Constants */
+    116          /* EasyCASE ) */
+    117          /* EasyCASE ( 222
+    118             ENUM Definitions */
+    119          /* EasyCASE ) */
+    120          /* EasyCASE ( 217
+    121             Variable Definitions */
+    122          U8 A_ActivityInternalBuffer_U8R[INTERNAL_FIFO_MAX_SIZE];         /**< Internal Buffer to hold Instantaneous Activity */
+    123          U8 A_Peak2PeakCountInternalBuffer_U8R[INTERNAL_FIFO_MAX_SIZE];   /**< Internal Buffer to hold Peak-To-Peak Time Counts */
+    124          U8 A_StepToStepCountInternalBuffer_U8R[INTERNAL_FIFO_MAX_SIZE];  /**< Internal Buffer to hold Step-To-Step Time Counts */
+    125          
+    126          U8 A_ActivityExternalBuffer_U8R[EXTERNAL_FIFO_MAX_SIZE];         /**< External Buffer to hold Instantaneous Activity */
+    127          U8 A_Peak2PeakCountExternalBuffer_U8R[EXTERNAL_FIFO_MAX_SIZE];   /**< External Buffer to hold Peak-To-Peak Time Counts */
+    128          U8 A_StepToStepCountExternalBuffer_U8R[EXTERNAL_FIFO_MAX_SIZE];  /**< External Buffer to hold Step-To-Step Time Counts */
+    129          
+    130          U8 V_InternalFIFOSize_U8R = 0;  /**<  FIFO size for Internal Buffer */
+    131          U8 V_ExternalFIFOSize_U8R = 0;  /**<  FIFO size for External Buffer */
+    132          /* EasyCASE ) */
+    133          /* EasyCASE ( 223
+    134             Constant- and Table-Definitions in ROM/EEPROM */
+    135          /* EasyCASE ) */
+    136          /* EasyCASE ( 252
+    137             Functions Prototype Declaration */
+    138          /* EasyCASE ) */
+    139          /* EasyCASE ) */
+    140          /* EasyCASE ( 70
+    141             API-Interface functions */
+    142          /* EasyCASE ( 100324
+    143             ShiftFIFO_U8 */
+    144          /* EasyCASE F */
+    145          /*******************************************************************************
+    146           * Description: *//**\brief This API should be called to shift the FIFO values
+    147           * by desired no of shift counts.
+    148           *                          
+    149           *
+    150           *
+    151           *
+    152           * \param
+    153           *  U8 *p_InputBuffer_u8r ---> Input Buffer on which shifting has to be done.
+    154           *  U8  v_FifoSize_u8r --> Length of the Input FIFO buffer.
+    155           *  U8  v_ShiftCount_u8r --> Shift count by which data into input buffer has to be shifted.
+    156           *
+    157           * \return 
+    158           *  NA  
+    159           *
+    160           ******************************************************************************/
+    161          /* Scheduling: 
+    162           *
+    163           *
+    164           *
+    165           * Usage guide:
+    166           *
+    167           *
+    168           * Remarks:
+    169           *
+    170           ******************************************************************************/
+    171          void ShiftFIFO_U8(U8 *p_InputBuffer_u8r, U8 v_FifoSize_u8r, U8 v_ShiftCount_u8r)
+    172             {
+    173             /* EasyCASE ( 101013
+    174                Local Variables */
+    175             U8 v_Index_u8r = 0;
+    176             /* EasyCASE ) */
+    177             /* EasyCASE ( 101014
+    178                Shift FIFO values */
+    179             for (v_Index_u8r = 0; v_Index_u8r < (v_FifoSize_u8r-v_ShiftCount_u8r); v_Index_u8r++)
+    180                {
+    181                p_InputBuffer_u8r[v_FifoSize_u8r-v_Index_u8r-1] = p_InputBuffer_u8r[v_FifoSize_u8r-v_Index_u8r-1-v_ShiftCount_u8r];
+    182                }
+    183             /* EasyCASE ) */
+    184             }
+    185          /* EasyCASE ) */
+    186          /* EasyCASE ( 100415
+    187             SetInternalBuffer */
+    188          /* EasyCASE F */
+    189          /*******************************************************************************
+    190           * Description: *//**\brief This API should be called to set the values into 
+    191           * respective internal buffers.
+    192           *  
+    193           *
+    194           *
+    195           *
+    196           *  \param
+    197           *   U8 v_StepToStepCount_u8r --> Current Step-To-Step time counts.
+    198           *   U8 v_Peak2PeakCount_u8r --> Current Peak-To-Peak time counts 
+    199           *   U8 v_Activity_u8r --> Instantaneous activity.
+    200           *
+    201           *  \return 
+    202           *   NONE
+    203           *            
+    204           *
+    205           ******************************************************************************/
+    206          /* Scheduling: 
+    207           * 
+    208           *
+    209           * Usage guide:
+    210           *
+    211           *
+    212           * Remarks:
+    213           *
+    214           ******************************************************************************/
+    215          void SetInternalBuffer(U8 v_StepToStepCount_u8r, U8 v_Peak2PeakCount_u8r, U8 v_Activity_u8r)
+    216             {
+    217             /* EasyCASE ( 101016
+    218                Push the current Step-To-Step, Peak-To-Peak time counts and instantaneous activity values into internal FIFOs. */
+    219             ShiftFIFO_U8( A_StepToStepCountInternalBuffer_U8R,INTERNAL_FIFO_MAX_SIZE,1 );
+    220             ShiftFIFO_U8( A_Peak2PeakCountInternalBuffer_U8R,INTERNAL_FIFO_MAX_SIZE,1 );
+    221             ShiftFIFO_U8( A_ActivityInternalBuffer_U8R,INTERNAL_FIFO_MAX_SIZE,1 );
+    222             
+    223             A_StepToStepCountInternalBuffer_U8R[FIFO_START_INDEX] = v_StepToStepCount_u8r;
+    224             A_Peak2PeakCountInternalBuffer_U8R[FIFO_START_INDEX] = v_Peak2PeakCount_u8r;
+    225             A_ActivityInternalBuffer_U8R[FIFO_START_INDEX] = v_Activity_u8r;
+    226             /* EasyCASE ) */
+    227             /* EasyCASE ( 101015
+    228                Increment the Internal FIFO data size counter */
+    229             if (V_InternalFIFOSize_U8R < INTERNAL_FIFO_MAX_SIZE)
+    230                {
+    231                V_InternalFIFOSize_U8R++;
+    232                }
+    233             /* EasyCASE ) */
+    234             }
+    235          /* EasyCASE ) */
+    236          /* EasyCASE ( 100852
+    237             GetInternalBuffer */
+    238          /* EasyCASE F */
+    239          /*******************************************************************************
+    240           * Description: *//**\brief This API should be called to get the values from 
+    241           * respective internal buffers.
+    242           *  
+    243           *
+    244           *
+    245           *
+    246           *  \param
+    247           *   U8 *p_StepToStepCount_u8r --> Pointer to Step-To-Step time count buffer.
+    248           *   U8 *p_Peak2PeakCount_u8r --> Pointer to Peak-To-Peak time count buffer. 
+    249           *   U8 *p_Activity_u8r --> Pointer to Instantaneous activity buffer.
+    250           *
+    251           *
+    252           *  \return 
+    253           *   NONE
+    254           *            
+    255           *
+    256           ******************************************************************************/
+    257          /* Scheduling: 
+    258           *
+    259           *
+    260           *
+    261           * Usage guide:
+    262           *
+    263           *
+    264           * Remarks:
+    265           *
+    266           ******************************************************************************/
+    267          void GetInternalBuffer(U8 *p_StepToStepCount_u8r, U8 *p_Peak2PeakCount_u8r, U8 *p_Activity_u8r)
+    268             {
+    269             /* EasyCASE ( 101017
+    270                Local Variables */
+    271             U8 v_Index_u8r;
+    272             /* EasyCASE ) */
+    273             /* EasyCASE ( 101018
+    274                Copy the values from internal buffer to the external buffer */
+    275             for (v_Index_u8r = 0; v_Index_u8r < V_InternalFIFOSize_U8R; v_Index_u8r++)
+    276                {
+    277                *(p_StepToStepCount_u8r + v_Index_u8r) = A_StepToStepCountInternalBuffer_U8R[v_Index_u8r];
+    278                *(p_Peak2PeakCount_u8r + v_Index_u8r) = A_Peak2PeakCountInternalBuffer_U8R[v_Index_u8r];
+    279                *(p_Activity_u8r + v_Index_u8r) = A_ActivityInternalBuffer_U8R[v_Index_u8r];
+    280                }
+    281             /* EasyCASE ) */
+    282             /* EasyCASE ( 101019
+    283                Reset the internal buffer data size counter variable */
+    284             ResetInternalFIFO();
+    285             /* EasyCASE ) */
+    286             }
+    287          /* EasyCASE ) */
+    288          /* EasyCASE ( 100804
+    289             ResetInternalFIFO */
+    290          /* EasyCASE F */
+    291          /*******************************************************************************
+    292           * Description: *//**\brief This API should be called to reset the internal FIFO
+    293           * data size counter.
+    294           *                         
+    295           *  
+    296           *
+    297           *
+    298           *
+    299           *  \param
+    300           *   NONE   
+    301           *
+    302           *  \return 
+    303           *   NONE  
+    304           *
+    305           ******************************************************************************/
+    306          /* Scheduling: 
+    307           *
+    308           *
+    309           *
+    310           * Usage guide:
+    311           *
+    312           *
+    313           * Remarks:
+    314           *
+    315           ******************************************************************************/
+    316           void ResetInternalFIFO(void)
+    317             {
+    318             /* EasyCASE ( 101020
+    319                Clear the Internal FIFO data size counter */
+    320             V_InternalFIFOSize_U8R = 0;
+    321             /* EasyCASE ) */
+    322             }
+    323          /* EasyCASE ) */
+    324          /* EasyCASE ( 100817
+    325             GetInternalFIFOSize */
+    326          /* EasyCASE F */
+    327          /*******************************************************************************
+    328           * Description: *//**\brief This API should be called to get the size of the
+    329           * Internal FIFO buffer data.
+    330           *                         
+    331           *  
+    332           *
+    333           *
+    334           *
+    335           *  \param
+    336           *   NONE
+    337           *
+    338           *  \return 
+    339           *   U8 --> Data Size of the internal FIFO buffer.  
+    340           *
+    341           ******************************************************************************/
+    342          /* Scheduling: 
+    343           *
+    344           *
+    345           *
+    346           * Usage guide:
+    347           *
+    348           *
+    349           * Remarks:
+    350           *
+    351           ******************************************************************************/
+    352           U8 GetInternalFIFOSize(void)
+    353             {
+    354             /* EasyCASE ( 101021
+    355                Return Internal FIFO size */
+    356             return V_InternalFIFOSize_U8R;
+    357             /* EasyCASE ) */
+    358             }
+    359          /* EasyCASE ) */
+    360          /* EasyCASE ( 101003
+    361             SetExternalBuffer */
+    362          /* EasyCASE F */
+    363          /*******************************************************************************
+    364           * Description: *//**\brief This API should be called to set the values into 
+    365           * respective external buffers.
+    366           *  
+    367           *
+    368           *
+    369           *  \param
+    370           *   U8 *p_StepToStepCount_u8r --> Current Step-To-Step time counts.
+    371           *   U8 *p_Peak2PeakCount_u8r --> Current Peak-To-Peak time counts 
+    372           *   U8 *p_Activity_u8r --> Instantaneous activity.
+    373           *   U8  v_BufferLength_u8r --> No of data which has to be pushed into external buffer.
+    374           *
+    375           *  \return 
+    376           *   NONE
+    377           *            
+    378           *
+    379           ******************************************************************************/
+    380          /* Scheduling: 
+    381           * 
+    382           *
+    383           * Usage guide:
+    384           *
+    385           *
+    386           * Remarks:
+    387           *
+    388           ******************************************************************************/
+    389          void SetExternalBuffer(U8 *p_StepToStepCount_u8r, U8 *p_Peak2PeakCount_u8r, U8 *p_Activity_u8r, U8 v_BufferLength_u8r)
+    390             {
+    391             /* EasyCASE ( 101022
+    392                Local Variables */
+    393             U8 v_Index_u8r = 0;
+    394             /* EasyCASE ) */
+    395             /* EasyCASE ( 101023
+    396                Shift the Step-To-Step, Peak-To-Peak time counts and instantaneous activity values FIFOs */
+    397             ShiftFIFO_U8(A_StepToStepCountExternalBuffer_U8R,EXTERNAL_FIFO_MAX_SIZE,v_BufferLength_u8r );
+    398             ShiftFIFO_U8(A_Peak2PeakCountExternalBuffer_U8R,EXTERNAL_FIFO_MAX_SIZE,v_BufferLength_u8r );
+    399             ShiftFIFO_U8(A_ActivityExternalBuffer_U8R,EXTERNAL_FIFO_MAX_SIZE,v_BufferLength_u8r );
+    400             /* EasyCASE ) */
+    401             /* EasyCASE ( 101024
+    402                Copy the new values into External FIFOs */
+    403             for (v_Index_u8r = 0; v_Index_u8r < v_BufferLength_u8r; v_Index_u8r++)
+    404                {
+    405                A_StepToStepCountExternalBuffer_U8R[v_Index_u8r] = *(p_StepToStepCount_u8r+v_Index_u8r);
+    406                A_Peak2PeakCountExternalBuffer_U8R[v_Index_u8r] = *(p_Peak2PeakCount_u8r+v_Index_u8r);
+    407                A_ActivityExternalBuffer_U8R[v_Index_u8r] = *(p_Activity_u8r+v_Index_u8r);
+    408                /* EasyCASE - */
+    409                /* Increment the External FIFO data size counter  */
+    410                if (V_ExternalFIFOSize_U8R < EXTERNAL_FIFO_MAX_SIZE)
+    411                   {
+    412                   V_ExternalFIFOSize_U8R++;
+    413                   }
+    414                }
+    415             /* EasyCASE ) */
+    416             }
+    417          /* EasyCASE ) */
+    418          /* EasyCASE ( 101004
+    419             GetExternalBuffer */
+    420          /* EasyCASE F */
+    421          /*******************************************************************************
+    422           * Description: *//**\brief This API should be called to get the values from 
+    423           * respective external buffers.
+    424           *  
+    425           *
+    426           *
+    427           *
+    428           *  \param
+    429           *   U8 *p_StepToStepCount_u8r --> Pointer to Step-To-Step time count buffer.
+    430           *   U8 *p_Peak2PeakCount_u8r --> Pointer to Peak-To-Peak time count buffer. 
+    431           *   U8 *p_Activity_u8r --> Pointer to Instantaneous activity buffer.
+    432           *
+    433           *
+    434           *  \return 
+    435           *   NONE
+    436           *            
+    437           *
+    438           ******************************************************************************/
+    439          /* Scheduling: 
+    440           *
+    441           *
+    442           *
+    443           * Usage guide:
+    444           *
+    445           *
+    446           * Remarks:
+    447           *
+    448           ******************************************************************************/
+    449           void GetExternalBuffer(U8 *p_StepToStepCount_u8r, U8 *p_Peak2PeakCount_u8r, U8 *p_Activity_u8r)
+    450             {
+    451             /* EasyCASE ( 101025
+    452                Local variables */
+    453             U8 v_Index_u8r;
+    454             /* EasyCASE ) */
+    455             /* EasyCASE ( 101026
+    456                Copy the values from external buffer */
+    457             for (v_Index_u8r = 0; v_Index_u8r < V_ExternalFIFOSize_U8R; v_Index_u8r++)
+    458                {
+    459                *(p_StepToStepCount_u8r + v_Index_u8r) = A_StepToStepCountExternalBuffer_U8R[v_Index_u8r];
+    460                *(p_Activity_u8r + v_Index_u8r) = A_ActivityExternalBuffer_U8R[v_Index_u8r];          
+    461                *(p_Peak2PeakCount_u8r + v_Index_u8r) = A_Peak2PeakCountExternalBuffer_U8R[v_Index_u8r];
+    462                }
+    463             /* EasyCASE ) */
+    464             /* EasyCASE ( 101027
+    465                Reset the external buffer data size counter variable */
+    466             ResetExternalFIFO();
+    467             /* EasyCASE ) */
+    468             }
+    469          /* EasyCASE ) */
+    470          /* EasyCASE ( 101005
+    471             ResetExternalFIFO */
+    472          /* EasyCASE F */
+    473          /*******************************************************************************
+    474           * Description: *//**\brief This API should be called to reset the external FIFO
+    475           * data size counter.
+    476           *                         
+    477           *  
+    478           *
+    479           *
+    480           *
+    481           *  \param
+    482           *   NONE   
+    483           *
+    484           *  \return 
+    485           *   NONE  
+    486           *
+    487           ******************************************************************************/
+    488          /* Scheduling: 
+    489           *
+    490           *
+    491           *
+    492           * Usage guide:
+    493           *
+    494           *
+    495           * Remarks:
+    496           *
+    497           ******************************************************************************/
+    498           void ResetExternalFIFO(void)
+    499             {
+    500             /* EasyCASE ( 101028
+    501                Clear the External FIFO data size counter */
+    502             V_ExternalFIFOSize_U8R = 0;
+    503             /* EasyCASE ) */
+    504             }
+    505          /* EasyCASE ) */
+    506          /* EasyCASE ( 101006
+    507             GetExternalFIFOSize */
+    508          /* EasyCASE F */
+    509          /*******************************************************************************
+    510           * Description: *//**\brief This API should be called to get the size of the
+    511           * External FIFO buffer data.
+    512           *                         
+    513           *  
+    514           *
+    515           *
+    516           *
+    517           *  \param
+    518           *   NONE
+    519           *
+    520           *  \return 
+    521           *   U8 --> Data Size of the external FIFO buffer.  
+    522           *
+    523           ******************************************************************************/
+    524          /* Scheduling: 
+    525           *
+    526           *
+    527           *
+    528           * Usage guide:
+    529           *
+    530           *
+    531           * Remarks:
+    532           *
+    533           ******************************************************************************/
+    534           U8 GetExternalFIFOSize(void)
+    535             {
+    536             /* EasyCASE ( 101029
+    537                Return external buffer size */
+    538             return V_ExternalFIFOSize_U8R;
+    539             /* EasyCASE ) */
+    540             }
+    541          /* EasyCASE ) */
+    542          /* EasyCASE ( 100991
+    543             ProcessLPF */
+    544          /* EasyCASE F */
+    545          /*******************************************************************************
+    546           * Description: *//**\brief This API should be called to process the LOW PASS FILTER Data.
+    547           *                         
+    548           *  
+    549           *
+    550           *
+    551           *
+    552           *  \param
+    553           *   ts_LPF *p_ObjLPF --> Structure pointer to low pass filter object.
+    554           *   
+    555           *
+    556           *  \return 
+    557           *   NONE 
+    558           *
+    559           ******************************************************************************/
+    560          /* Scheduling: 
+    561           *
+    562           *
+    563           *
+    564           * Usage guide:
+    565           *
+    566           *
+    567           * Remarks:
+    568           *
+    569           ******************************************************************************/
+    570           void ProcessLPF(ts_LPF *p_ObjLPF)//µÍÍ¨ÂË²¨Æ÷
+    571             {
+    572             /* EasyCASE ( 101030
+    573                Calculate LPF value by using current sample value */
+    574             p_ObjLPF->V_FilterValue_F32R =  (float)p_ObjLPF->V_CurSample_U16R * p_ObjLPF->V_ALPHA_F32R + (float)p_ObjLPF->V_FilterValue_F32R * (1 - p_ObjLPF->V_ALPHA_F32R);
+    575             /* EasyCASE ) */
+    576             }
+    577          /* EasyCASE ) */
+    578          /* EasyCASE ( 100996
+    579             GetSmoothValue */
+    580          /* EasyCASE F */
+    581          /*******************************************************************************
+    582           * Description: *//**\brief This API should be called to smoothen the data of
+    583           * the input buffer by using Moving Average Method.
+    584           *                         
+    585           *  
+    586           *
+    587           *
+    588           *
+    589           *  \param
+    590           *   ts_SmoothFilter *p_SmoothFilter_xxr --> Smooth Filter Variable
+    591           *   
+    592           *
+    593           *  \return 
+    594           *   NONE  
+    595           *
+    596           ******************************************************************************/
+    597          /* Scheduling: 
+    598           *
+    599           *
+    600           *
+    601           * Usage guide:
+    602           *
+    603           *
+    604           * Remarks:
+    605           *
+    606           ******************************************************************************/
+    607           void GetSmoothValue(ts_SmoothFilter *p_SmoothFilter_xxr)
+    608             {
+    609             /* EasyCASE ( 101031
+    610                Local Variables */
+    611             /* Local Variable */
+    612                U8 v_Index_u8r = 0;
+    613                U32 v_TempSum_u32r = 0;
+    614             /* EasyCASE ) */
+    615             /* EasyCASE ( 101032
+    616                Copy the new sample values into Smooth Buffer */
+    617             p_SmoothFilter_xxr->A_SmoothBuffer_U16R[p_SmoothFilter_xxr->V_FilterIndex_U8R] = p_SmoothFilter_xxr->V_NewSample_U16R;
+    618             /* EasyCASE ) */
+    619             /* EasyCASE ( 101033
+    620                Check whether Filter Index has crossed the Filter Length or not ?
+    621                IF-->YES, reset the Filter Index. */
+    622             if (p_SmoothFilter_xxr->V_FilterIndex_U8R >= (p_SmoothFilter_xxr->V_FilterLength_U8R-1))
+    623                {
+    624                p_SmoothFilter_xxr->V_FilterIndex_U8R = 0;
+    625                }
+    626             else
+    627                {
+    628                p_SmoothFilter_xxr->V_FilterIndex_U8R ++;
+    629                }
+    630             /* EasyCASE ) */
+    631             /* EasyCASE ( 101034
+    632                Take the moving average of the values of the Filter Buffer. */
+    633             for (v_Index_u8r = 0; v_Index_u8r < p_SmoothFilter_xxr->V_FilterLength_U8R; v_Index_u8r++)
+    634                {
+    635                v_TempSum_u32r += p_SmoothFilter_xxr->A_SmoothBuffer_U16R[v_Index_u8r];
+    636                }
+    637             p_SmoothFilter_xxr->V_FilteredValue_U16R = (U16)(v_TempSum_u32r/p_SmoothFilter_xxr->V_FilterLength_U8R);
+    638             /* EasyCASE ) */
+    639             }
+    640          /* EasyCASE ) */
+    641          /* EasyCASE ) */
+    642          /* EasyCASE ( 100504
+    643             Local functions */
+    644          /* EasyCASE ) */
+    645          /* EasyCASE ) */
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      20  A_ActivityExternalBuffer_U8R
+      20  A_ActivityInternalBuffer_U8R
+      20  A_Peak2PeakCountExternalBuffer_U8R
+      20  A_Peak2PeakCountInternalBuffer_U8R
+      20  A_StepToStepCountExternalBuffer_U8R
+      20  A_StepToStepCountInternalBuffer_U8R
+      82  GetExternalBuffer
+       4  GetExternalFIFOSize
+      82  GetInternalBuffer
+       4  GetInternalFIFOSize
+     138  GetSmoothValue
+      82  ProcessLPF
+       5  ResetExternalFIFO
+       5  ResetInternalFIFO
+     147  SetExternalBuffer
+      91  SetInternalBuffer
+     107  ShiftFIFO_U8
+       1  V_ExternalFIFOSize_U8R
+       1  V_InternalFIFOSize_U8R
+
+ 
+ 747 bytes in section .far_func.text
+ 122 bytes in section .near.bss
+ 
+ 747 bytes of CODE memory
+ 122 bytes of DATA memory
+
+Errors: none
+Warnings: none

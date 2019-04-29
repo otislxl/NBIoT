@@ -1,0 +1,152 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:14
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\net.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\net.c" -e --char_is_signed
+#        -On --no_cse --no_unroll --no_inline --no_code_motion --no_tbaa
+#        --no_cross_call --debug --code_model medium --data_model medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\net.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\net.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\net.c
+      1          #include "net.h"
+      2          				
+      3          
+      4          /************************************************************************ 
+      5          *名称:	     set_net_state
+      6          *类型:            函数类型
+      7          *描述:	     进入网络状态函数
+      8          *输入参数:     state网络状态
+      9          *输出参数:       
+     10          *返回值  :  
+     11          *其他说明:   
+     12          ************************************************************************/
+     13          void set_net_state(MODULE_STS_E state)
+     14          {
+     15          	if(ModuleSts == state)
+     16          		return;
+     17          	ModuleSts = state;
+     18          	switch (ModuleSts)
+     19          	{
+     20          		case MODULE_IDLE_STS:
+     21          		{
+     22          		}
+     23          		break;
+     24          		
+     25          		case MODULE_INI_STS:
+     26          		{
+     27          		}
+     28          		break;
+     29          
+     30          		case MODULE_SEND_STS:
+     31          		{
+     32          			Moudleinfo.AtCSQ = 0;
+     33          			set_sleep_counter_max(0);
+     34          			if(Moudleinfo.ops_type != OPS_TELECOM)
+     35          			{
+     36          				NetBreakHandle();
+     37          			}
+     38          		}
+     39          		break;
+     40          
+     41          		case MODULE_WAIT_STS:
+     42          		{
+     43          			if(tcp_had_linked_flag)
+     44          			{
+     45          				Moudleinfo.AtNSOCL=0;
+     46          				Moudleinfo.AtCGATT0=0;
+     47          			}
+     48          			set_sleep_counter_min(KEEP_WORK_MAX_TIME-2);
+     49          		}
+     50          		break;
+     51          	
+     52          		default:
+     53          			break;
+     54          	}
+     55          }
+     56          /************************************************************************ 
+     57          *名称:	     net_link_handle
+     58          *类型:            函数类型
+     59          *描述:	     处理网络连接
+     60          *输入参数:     
+     61          *输出参数:       
+     62          *返回值  :  
+     63          *其他说明:   
+     64          ************************************************************************/
+     65          void net_link_handle(void)
+     66          {	
+     67          	if(AtDelayTime)
+     68          		return;
+     69          	if (Moudleinfo.SendFlag==1)
+     70          		return;
+     71          		
+     72          	switch (ModuleSts)
+     73          	{
+     74          		case MODULE_IDLE_STS:
+     75          		case MODULE_INI_STS:
+     76          		{
+     77          			if(ModuleIniDisp()==1)
+     78          				set_net_state(MODULE_WAIT_STS);
+     79          		}break;
+     80          		case MODULE_SEND_STS:
+     81          		{
+     82          			ModuleNetLinkHandle();
+     83          		}
+     84          		break;
+     85          		case MODULE_WAIT_STS:
+     86          		{
+     87          			ModuleNetBreakHandle();
+     88          
+     89          		}break;
+     90          		default:break;
+     91          	}
+     92          }
+     93          
+     94          /************************************************************************ 
+     95          *名称:	     net_low_poewr_mode
+     96          *类型:            函数类型
+     97          *描述:	     网络低功耗处理
+     98          *输入参数:     
+     99          *输出参数:       
+    100          *返回值  :  
+    101          *其他说明:   
+    102          ************************************************************************/
+    103          void net_low_poewr_mode(void)
+    104          {
+    105          	if(ModuleSts>MODULE_INI_STS)
+    106          		set_net_state(MODULE_WAIT_STS);
+    107          	load_continuous_flag=FALSE;
+    108          	SetNoDataTimeCount(0);
+    109          }
+    110          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      64  net_link_handle
+      23  net_low_poewr_mode
+     103  set_net_state
+
+ 
+ 190 bytes in section .far_func.text
+ 
+ 190 bytes of CODE memory
+
+Errors: none
+Warnings: none

@@ -1,0 +1,341 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 29/Apr/2019  10:10:36
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\uart1.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\uart1.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\uart1.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\uart1.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\uart1.c
+      1          #include "uart1.h"
+      2          
+      3          uint8_t uart_rx[UART1_CACHE_MAX];
+      4          uint8_t uart_rx_read;	
+      5          uint8_t uart_rx_write;	
+      6          
+      7          /*******************************************************************************
+      8           * 名称: Usart1_Init
+      9           * 功能: UART1初始化
+     10           * 形参: 无
+     11           * 返回: 无
+     12           * 说明: 无 
+     13           ******************************************************************************/
+     14          void Uart1_Init (void)
+     15          {
+     16          	/* EVAL COM (USARTx) configuration -----------------------------------------*/
+     17          	/* USART configured as follow:
+     18          	    - BaudRate = 115200 baud  
+     19          	    - Word Length = 8 Bits
+     20          	    - One Stop Bit
+     21          	    - No parity
+     22          	    - Receive and transmit enabled
+     23          	    - USART Clock disabled
+     24          	*/
+     25          	uart_rx_read=0;
+     26          	uart_rx_write=0;
+     27            /* Enable USART clock */
+     28            CLK_PeripheralClockConfig(CLK_Peripheral_USART1, ENABLE);
+     29          
+     30            //SYSCFG_REMAPDeInit();        
+     31            //SYSCFG_REMAPPinConfig(REMAP_Pin_USART1TxRxPortA,ENABLE);     //
+     32            /* Configure USART Tx as alternate function push-pull  (software pull up)*/
+     33            GPIO_ExternalPullUpConfig(GPIOC, GPIO_Pin_3, ENABLE);
+     34          
+     35            /* Configure USART Rx as alternate function push-pull  (software pull up)*/
+     36            GPIO_ExternalPullUpConfig(GPIOC, GPIO_Pin_2, ENABLE);
+     37          
+     38            USART_DeInit(USART1);		//复位UART1 
+     39            /* USART configuration */
+     40            USART_Init(USART1, 9600,
+     41                       USART_WordLength_8b,
+     42                       USART_StopBits_1,
+     43                       USART_Parity_No,
+     44                       (USART_Mode_TypeDef)(USART_Mode_Tx | USART_Mode_Rx));
+     45          
+     46            /* Enable general interrupts */
+     47            enableInterrupts();
+     48          
+     49            /* Enable the USART Receive interrupt: this interrupt is generated when the USART
+     50              receive data register is not empty */
+     51            USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
+     52            /* Enable the USART Transmit complete interrupt: this interrupt is generated when the USART
+     53              transmit Shift Register is empty */
+     54          //  USART_ITConfig(USART1, USART_IT_TC, ENABLE);
+     55           ITC_SetSoftwarePriority(USART1_RX_TIM5_CC_IRQn,ITC_PriorityLevel_3);
+     56          
+     57            /* Enable USART */
+     58            USART_Cmd(USART1, ENABLE);
+     59          }
+     60          
+     61          /*******************************************************************************
+     62           * 名称: UART1_SendByte
+     63           * 功能: UART1发送一个字节
+     64           * 形参: data -> 要发送的字节
+     65           * 返回: 无
+     66           * 说明: 无 
+     67           ******************************************************************************/
+     68          void UART1_SendByte(uint8_t data)
+     69          {
+     70           	uint16_t i=0;
+     71          	/* 等待传输结束 */
+     72          	while (USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
+     73          	{
+     74          		i++;
+     75          		if(i > 1000)
+     76          			break;
+     77          	}
+     78           	USART_SendData8(USART1, data);
+     79          }
+     80          
+     81          /*******************************************************************************
+     82           * 名称: UART1_SendStr
+     83           * 功能: UART1发送len个字符
+     84           * 形参: data -> 指向要发送的字符串
+     85           *       len -> 要发送的字节数
+     86           * 返回: 无
+     87           * 说明: 无 
+     88           ******************************************************************************/
+     89          void UART1_SendStr(uint8_t *str,uint16_t len)
+     90          {
+     91          	uint16_t i;
+     92          	for(i=0;i<len;i++)
+     93          		UART1_SendByte(str[i]);
+     94          }
+     95          
+     96           /**************************************************
+     97          功能：UART1串口中断服务程序
+     98           * 形参: 数据
+     99           * 返回: 接收到的字符
+    100           * 说明: 无 
+    101          **************************************************/
+    102          void UART1_ISR(uint8_t a)
+    103          {
+    104          	uint8_t tempw;
+    105          	uart_rx[uart_rx_write] = a;
+    106          	tempw=(uart_rx_write + 1) % UART1_CACHE_MAX;
+    107          
+    108          	if (tempw==uart_rx_read)
+    109          	{
+    110                 //接收缓冲区满
+    111          		return ;
+    112          	}
+    113          	else
+    114          	{
+    115          		uart_rx_write=tempw;
+    116          	}
+    117          }
+    118          
+    119          /*******************************************************************************
+    120           * 名称: Usart2_Init
+    121           * 功能: UART2初始化
+    122           * 形参: 无
+    123           * 返回: 无
+    124           * 说明: 无 
+    125           ******************************************************************************/
+    126          void Usart2_Init(void)
+    127          {
+    128          
+    129            /* Enable USART clock */
+    130            CLK_PeripheralClockConfig(CLK_Peripheral_USART2, ENABLE);
+    131          
+    132            /* Configure USART Tx as alternate function push-pull  (software pull up)*/
+    133            GPIO_ExternalPullUpConfig(GPIOE, GPIO_Pin_4, ENABLE);
+    134          
+    135            /* Configure USART Rx as alternate function push-pull  (software pull up)*/
+    136            GPIO_ExternalPullUpConfig(GPIOE, GPIO_Pin_3, ENABLE);
+    137          
+    138            USART_DeInit(USART2);		//复位UART2 
+    139            /* USART configuration */
+    140            USART_Init(USART2, 115200,
+    141                       USART_WordLength_8b,
+    142                       USART_StopBits_1,
+    143                       USART_Parity_No,
+    144                       (USART_Mode_TypeDef)(USART_Mode_Tx | USART_Mode_Rx));
+    145          
+    146            /* Enable general interrupts */
+    147            enableInterrupts();
+    148          
+    149            /* Enable the USART Receive interrupt: this interrupt is generated when the USART
+    150              receive data register is not empty */
+    151            USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
+    152          
+    153            /* Enable USART */
+    154            USART_Cmd(USART2, ENABLE);
+    155          }
+    156          
+    157          /*******************************************************************************
+    158           * 名称: UART2_SendStr
+    159           * 功能: UART2发送len个字符
+    160           * 形参: data -> 指向要发送的字符串
+    161           *       len -> 要发送的字节数
+    162           * 返回: 无
+    163           * 说明: 无 
+    164           ******************************************************************************/
+    165          void UART2_SendStr(uint8_t *str,uint16_t len)
+    166          {
+    167          	uint16_t i,j;
+    168          	for(i=0;i<len;i++)
+    169          	{
+    170          		j = 0;
+    171          		while (USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET)
+    172          		{
+    173          			j++;
+    174          			if(j > 1000)
+    175          				break;
+    176          		}
+    177          	  	USART_SendData8(USART2, str[i]);
+    178          	}
+    179          }
+    180          
+    181          /*******************************************************************************
+    182           * 名称: Usart3_Init
+    183           * 功能: UART3初始化
+    184           * 形参: 无
+    185           * 返回: 无
+    186           * 说明: 无 
+    187           ******************************************************************************/
+    188          void Usart3_Init(void)
+    189          {
+    190          
+    191            /* Enable USART clock */
+    192            CLK_PeripheralClockConfig(CLK_Peripheral_USART3, ENABLE);
+    193          
+    194            //SYSCFG_REMAPDeInit();
+    195            SYSCFG_REMAPPinConfig(REMAP_Pin_USART3TxRxPortF,ENABLE);
+    196          
+    197            /* Configure USART Tx as alternate function push-pull  (software pull up)*/
+    198            GPIO_ExternalPullUpConfig(GPIOF, GPIO_Pin_0, ENABLE);
+    199          
+    200            /* Configure USART Rx as alternate function push-pull  (software pull up)*/
+    201            GPIO_ExternalPullUpConfig(GPIOF, GPIO_Pin_1, ENABLE);
+    202          
+    203            USART_DeInit(USART3);		//复位UART3 
+    204            /* USART configuration */
+    205            USART_Init(USART3, 115200,
+    206                       USART_WordLength_8b,
+    207                       USART_StopBits_1,
+    208                       USART_Parity_No,
+    209                       (USART_Mode_TypeDef)(USART_Mode_Tx | USART_Mode_Rx));
+    210          
+    211            /* Enable general interrupts */
+    212            enableInterrupts();
+    213          
+    214            /* Enable the USART Receive interrupt: this interrupt is generated when the USART
+    215              receive data register is not empty */
+    216            USART_ITConfig(USART3, USART_IT_RXNE, ENABLE);
+    217            /* Enable USART */
+    218            USART_Cmd(USART3, ENABLE);
+    219          }
+    220          /*******************************************************************************
+    221           * 名称: UART3_SendStr
+    222           * 功能: UART3发送len个字符
+    223           * 形参: data -> 指向要发送的字符串
+    224           *       len -> 要发送的字节数
+    225           * 返回: 无
+    226           * 说明: 无 
+    227           ******************************************************************************/
+    228          void UART3_SendStr(uint8_t *str,uint16_t len)
+    229          {
+    230          	uint16_t i,j;
+    231          	for(i=0;i<len;i++)
+    232          	{
+    233          		j = 0;
+    234          		while (USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET)
+    235          		{
+    236          			j++;
+    237          			if(j > 1000)
+    238          				break;
+    239          		}
+    240          	  	USART_SendData8(USART3, str[i]);
+    241          	}
+    242          }
+    243          /* 串口3通讯数据接收函数*/
+    244          void UART3_ISR(uint8_t data)
+    245          {
+    246          	
+    247          }
+    248          
+    249          //串口初始化
+    250          void Uart_Init (void)
+    251          {
+    252          	Uart1_Init();
+    253          #ifdef SUPPORT_WIFI
+    254          	Usart2_Init();
+    255          #endif
+    256          	Usart3_Init();
+    257          }
+    258          
+    259          //启动串口进入工作模式
+    260          void Uart_PowerOn_Config (void)
+    261          {
+    262          	USART_Cmd(USART1, ENABLE);
+    263          #ifdef SUPPORT_WIFI
+    264          	USART_Cmd(USART2, ENABLE);
+    265          #endif
+    266          	USART_Cmd(USART3, ENABLE);
+    267          }
+    268          
+    269          //串口低功耗
+    270          void Uart_PowerLow_Config (void)
+    271          {
+    272          	USART_Cmd(USART1, DISABLE);
+    273          	GPIO_Init(GPIOC,GPIO_Pin_3,GPIO_Mode_In_FL_No_IT);
+    274          //	GPIO_Init(GPIOA,GPIO_Pin_2,GPIO_Mode_Out_PP_High_Slow);
+    275          
+    276          #ifdef SUPPORT_WIFI
+    277          	USART_Cmd(USART2, DISABLE);
+    278          //	GPIO_Init(GPIOE,GPIO_Pin_3 | GPIO_Pin_4,GPIO_Mode_Out_PP_Low_Slow);
+    279          	GPIO_Init(GPIOE,GPIO_Pin_3 | GPIO_Pin_4,GPIO_Mode_In_FL_No_IT);
+    280          #endif
+    281          	
+    282          	USART_Cmd(USART3, DISABLE);
+    283          }
+    284          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      45  UART1_ISR
+      56  UART1_SendByte
+      44  UART1_SendStr
+      77  UART2_SendStr
+       1  UART3_ISR
+      77  UART3_SendStr
+     109  Uart1_Init
+      13  Uart_Init
+      47  Uart_PowerLow_Config
+      28  Uart_PowerOn_Config
+      92  Usart2_Init
+     101  Usart3_Init
+     200  uart_rx
+       1  uart_rx_read
+       1  uart_rx_write
+
+ 
+ 690 bytes in section .far_func.text
+ 202 bytes in section .near.bss
+ 
+ 690 bytes of CODE memory
+ 202 bytes of DATA memory
+
+Errors: none
+Warnings: none

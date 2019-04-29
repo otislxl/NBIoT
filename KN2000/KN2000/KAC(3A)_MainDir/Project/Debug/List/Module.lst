@@ -1,0 +1,1300 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:13
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Module.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Module.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\Module.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\Module.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Module.c
+      1          #include "stm8l15x.h"
+      2          #include "stm8l15x_itc.h"
+      3          #include "sysdefs.h"
+      4          #include <stdio.h>
+      5          #include <stdlib.h>
+      6          #include "string.h"
+      7          #include "EventQueue.h"
+      8          #include "OverTimeQueue.h"
+      9          #include "Module.h"
+     10          #include "ModuleProtocol.h"
+     11          #include "stm8l15x_rtc.h"
+     12          #include "hwdgpio.h"
+     13          #include <time.h>
+     14          
+     15          MODULEINFO  Moudleinfo;
+     16          char AtComRecBuf[UART_REV_MAX];
+     17          uint16 AtCommRecLen=0;
+     18          uint8 rev_NB_data_flag = FALSE;   	 	 //接收到NB模块有效指令标志
+     19          uint16 NB_module_error_cnt = 0;		//NB模块串口错误计数
+     20          uint8 module_at_invalid_time = 0;		//at指令无效次数
+     21          
+     22          uint8 SendId=0xff;					//当前发送的at指令id号
+     23          
+     24          uint8 AtDelayTime=0;					//AT指令等待时间
+     25          uint8 g_at_no_response=0;			//模块没有回应计数
+     26          
+     27          char *WNip="180.101.147.115,5683";		//电信测试平台
+     28          //char *WNip="117.60.157.137,5683";		//电信正式平台
+     29          
+     30          uint8 SendDataErrorTime = 0;
+     31          unsigned char ProSendbuf[UART_SEND_MAX];
+     32          uint16 ProAtLen;
+     33          uint8  ReSndCount=0;						//重发网络数据次数
+     34          uint8 socket_id=0xff;						//获取的模块可使用的socket id
+     35          uint8 ppp_had_linked_flag = FALSE;		//PPP连上标志
+     36          uint8 tcp_had_linked_flag = FALSE;			//TCP连上标志
+     37          uint8 tcp_sequence = 0;
+     38          uint8 NoDataTimeCount;					//询问网络数据次数
+     39          
+     40          /*******************************************************************/
+     41          //获取AT指令里面的","地址
+     42          //src查找字符串,n第几个逗号
+     43          /*******************************************************************/
+     44          uint8 getAddressFromAT(char *src, uint8 n)
+     45          {
+     46          	uint8  i;
+     47          	char *p=NULL;
+     48          	char *s=NULL;
+     49          	char tmp[128] = {0};
+     50          
+     51          	s = tmp;
+     52          	memcpy(s,src,128);
+     53          	for (i=0; i<n; i++)
+     54          	{
+     55          		p = strstr(s,",");
+     56          		if (p==NULL)
+     57          			return 0;
+     58          		*p = 0;
+     59          		s = p+1;
+     60          	}
+     61          	return s-tmp;
+     62          }
+     63          
+     64          //模块硬复位处理
+     65          void HW_ModuleReset(void)
+     66          {
+     67          	SetNB_IO_RESETGpio(1);
+     68          	delay_ms(500);
+     69          	SetNB_IO_RESETGpio(0); 
+     70          	ModuleResetInit();   //重新对模块进行初始化2
+     71          	Moudleinfo.AtNCSEARFCN=0;
+     72          	Moudleinfo.AtCFUN0=0;
+     73          	Moudleinfo.AtCFUN1=0;
+     74          	Moudleinfo.AtGetCFUN=0;
+     75          }
+     76          
+     77          //模块软复位处理
+     78          void reset_module_handle(void)
+     79          {  
+     80          	ModuleResetInit();
+     81          	Moudleinfo.AtNCSEARFCN=0;
+     82          	Moudleinfo.AtCFUN0=0;
+     83          	Moudleinfo.AtCFUN1=0;
+     84          	Moudleinfo.AtGetCFUN=0;
+     85          	Moudleinfo.QuestAck=0;
+     86          	SendId=ATNRB;
+     87          	UART1_SendStr((uint8*)"AT+NRB\r\n",strlen("AT+NRB\r\n"));
+     88          	Moudleinfo.SendFlag=1;
+     89          }
+     90          
+     91          //模块at指令有效处理
+     92          void module_at_valid_handle(void)
+     93          {  
+     94          	module_at_invalid_time = 0;
+     95          	set_sleep_counter_max(0);
+     96          	 AtDelayTime = 0;
+     97          }
+     98          
+     99          //模块at指令无效处理
+    100          void module_at_invalid_handle(uint8 time)
+    101          {  
+    102          	module_at_invalid_time ++;
+    103          	if(module_at_invalid_time > time)
+    104          	{
+    105          		module_at_invalid_time = 0;
+    106          		reset_module_handle();
+    107          	}
+    108          }
+    109          
+    110          //转换时间
+    111          void ComputeTime(register struct tm* const t)
+    112          {
+    113          	uint8 k;
+    114          
+    115          	t->tm_hour ++;
+    116          	if ((t->tm_hour&0x0f)>0x09)
+    117          	{
+    118          		t->tm_hour = (t->tm_hour&0xf0)+0x10;
+    119          	}
+    120          	if (t->tm_hour >= 0x24)	 //日
+    121          	{
+    122          		t->tm_hour = 0;
+    123          		t->tm_mday++;
+    124          		if ((t->tm_mday&0x0f)>0x09)
+    125          		{
+    126          			t->tm_mday = (t->tm_mday&0xf0)+0x10;
+    127          		}
+    128          		switch(t->tm_mon)
+    129          		{
+    130          			case 1:
+    131          			case 3:
+    132          			case 5:
+    133          			case 7:
+    134          			case 8:
+    135          			case 10:
+    136          			case 12: k = 0x31; break;
+    137          
+    138          			case 2:  if((t->tm_year%4)==0)
+    139          					{
+    140          						k = 0x29;
+    141          					}
+    142          					else
+    143          					{
+    144          						k = 0x28;
+    145          					}
+    146          					break;
+    147          
+    148          			default: k = 0x30; break;
+    149          		}
+    150          		if (t->tm_mday > k)	//月
+    151          		{
+    152          			t->tm_mday = 1;
+    153          			t->tm_mon++;
+    154          			if ((t->tm_mon&0x0f)>0x09)
+    155          			{
+    156          				t->tm_mon = (t->tm_mon&0xf0)+0x10;
+    157          				if (t->tm_mon > 12)
+    158          				{
+    159          					t->tm_mon=1;
+    160          					t->tm_year++;
+    161          				}
+    162          			}
+    163          		}
+    164          	}
+    165          }
+    166          
+    167          //获取模块的时间
+    168          uint8 Rec_cclk(char *buf)
+    169          {
+    170          	uint8 timebuf[8],j,i=0,Slen;
+    171          	struct tm tm_time;
+    172          
+    173          	Slen=strlen((char*)buf);
+    174          	for (j=0;j<7;j++)
+    175          	{
+    176          		while (i<Slen)
+    177          		{
+    178          			if (buf[i]>='0' && buf[i]<='9')
+    179          			{
+    180          				timebuf[j]=GetIntFromBuf((char*)&buf[i]);
+    181          				i+=2;
+    182          				break;
+    183          			}
+    184          			i++;
+    185          		}
+    186          	}
+    187          
+    188          	if (timebuf[0]<18)  return 0;
+    189          
+    190          	tm_time.tm_year = BinToBcd(timebuf[0]);
+    191          	tm_time.tm_mon = BinToBcd(timebuf[1]);
+    192          	tm_time.tm_mday = BinToBcd(timebuf[2]);
+    193          	tm_time.tm_hour = BinToBcd(timebuf[3]);
+    194          	tm_time.tm_min =BinToBcd(timebuf[4]);
+    195          	tm_time.tm_sec = BinToBcd(timebuf[5]);
+    196          	
+    197          	for(i=0;i<8;i++)
+    198          		ComputeTime(&tm_time);
+    199          	timebuf[0] = BcdToBin(tm_time.tm_year);
+    200          	timebuf[1] = BcdToBin(tm_time.tm_mon);
+    201          	timebuf[2] = BcdToBin(tm_time.tm_mday);
+    202          	timebuf[3] = BcdToBin(tm_time.tm_hour);
+    203          	timebuf[4] = BcdToBin(tm_time.tm_min);
+    204          	timebuf[5] = BcdToBin(tm_time.tm_sec);
+    205          
+    206          	set_date(timebuf);
+    207          	set_time(&timebuf[3]);
+    208          
+    209          	get_rtc_time();
+    210          	net_link_cclk_flag = TRUE; 
+    211          	module_at_valid_handle();
+    212          	return 0;
+    213          }
+    214          
+    215           /**************************************************
+    216          功能：UART1串口数据处理程序
+    217           * 形参: 数据
+    218           * 返回: 
+    219           * 说明: 无 
+    220          **************************************************/
+    221          void Uart1RevHandle(void)
+    222          {
+    223          	uint8 a;
+    224          	while(1)
+    225          	{
+    226          		if (uart_rx_read == uart_rx_write)
+    227          			break;
+    228          		if(rev_NB_data_flag == TRUE)
+    229          			break;
+    230          		a=uart_rx[uart_rx_read];
+    231          		uart_rx_read = (uart_rx_read+1) % UART1_CACHE_MAX;
+    232          		AtComRecBuf[AtCommRecLen] = a;
+    233          		NB_module_error_cnt = 0;
+    234          
+    235          		if(AtCommRecLen < (UART_REV_MAX-1))
+    236          			AtCommRecLen++;
+    237          		if(a==0xa)
+    238          		{
+    239          			AtComRecBuf[AtCommRecLen] = 0;
+    240          			if(AtCommRecLen>2)
+    241          				rev_NB_data_flag = TRUE;
+    242          			else
+    243          				AtCommRecLen = 0;
+    244          		}
+    245          	}
+    246          	
+    247          }
+    248          
+    249          void GetNBplantformIPandPORT(void)
+    250          {
+    251          	uint8 ip[15+1]={0},port[5+1]={0};
+    252          	memset(Moudleinfo.NB_plantform_IP,0,15);
+    253          	memset(Moudleinfo.NB_palntform_PORT,0,5);
+    254          
+    255          	hw_eeprom_read_bytes(NV_NB_PLANTFORM_IP,ip,15);
+    256          	hw_eeprom_read_bytes(NV_NB_PLANTFORM_PORT,port,5);
+    257          
+    258          	if(0==memcmp(Moudleinfo.NB_plantform_IP,ip,15))
+    259          	{
+    260          		memcpy(Moudleinfo.NB_plantform_IP,"218.56.11.180",strlen("218.56.11.180"));
+    261          		memcpy(Moudleinfo.NB_palntform_PORT,"14000",strlen("14000"));
+    262          //		memcpy(Moudleinfo.NB_palntform_PORT,"12000",strlen("12000"));
+    263           	}
+    264          	else
+    265          	{
+    266          		memcpy(Moudleinfo.NB_plantform_IP,ip,strlen((char*)ip));
+    267          		memcpy(Moudleinfo.NB_palntform_PORT,port,strlen((char*)port));
+    268          	}
+    269          
+    270          }
+    271          
+    272          //设置保持网络连接的时间
+    273          void SetNoDataTimeCount(uint8 time)
+    274          {
+    275          	NoDataTimeCount = time;
+    276          }
+    277          
+    278          //设置重发网络数据的超时时间
+    279          void SetReSendDataTime(uint16 time)
+    280          {
+    281          	Moudleinfo.SendDataTime = time;
+    282          }
+    283          
+    284          //网络断开处理
+    285          void NetBreakHandle(void)
+    286          {
+    287          	ReSndCount = 0;
+    288          	Moudleinfo.AtCGATT1=0;
+    289          	Moudleinfo.AtGetCGATT=0;
+    290          	Moudleinfo.AtNSOCR=0;
+    291          	Moudleinfo.AtNSOCO=0;
+    292          }
+    293          
+    294           /**************************************************
+    295          功能：NB模块数据处理程序
+    296           * 形参: 无 
+    297           * 返回: 无 
+    298           * 说明: 无 
+    299          **************************************************/
+    300          void RecAtComFormMoudle(void)
+    301          {
+    302          	char tempbuf[30];
+    303          	uint16 UdpDatalen,i,j; 
+    304          //	uint8 RecUdpDataBuf[REV_PRO_BUF_SIZE];		
+    305          	char *data_ptr = NULL;
+    306          
+    307          	if (rev_NB_data_flag)
+    308          	{
+    309          		 g_at_no_response = 0;
+    310          		 if (!memcmp("ERROR",AtComRecBuf,strlen("ERROR")))
+    311          		 {
+    312          
+    313          			if (SendId==ATNMGS) 
+    314          			{
+    315          				if(ReSndCount)
+    316          				{
+    317          					Moudleinfo.SendFlag=0; 
+    318          					SetReSendDataTime(RESEND_DATA_TIME);
+    319          				}
+    320          			}
+    321          			 else if(SendId==ATGETNCDP)
+    322          			 {
+    323          				Moudleinfo.SendFlag=0; 
+    324          				 Moudleinfo.GetipOk=1;
+    325          			 }
+    326          			 else if(SendId==ATNSOCL)
+    327          			 {
+    328          				Moudleinfo.SendFlag=0; 
+    329          			 	Moudleinfo.AtNSOCL=1;
+    330          				NetBreakHandle();
+    331          				tcp_had_linked_flag = FALSE;
+    332          			 }
+    333          			SendDataErrorTime ++;
+    334          			if(SendDataErrorTime > 10)
+    335          			{
+    336          				//复位模块
+    337          				SendDataErrorTime = 0;
+    338          				reset_module_handle();
+    339          			}
+    340          		 }
+    341          		 else
+    342          		 	SendDataErrorTime = 0;
+    343          
+    344          		if (!memcmp("REBOOTING",AtComRecBuf,strlen("REBOOTING")))
+    345          		{
+    346          				Moudleinfo.AtNRB=1;
+    347          		}
+    348          
+    349          		else if (!memcmp("+CCLK:",AtComRecBuf,strlen("+CCLK:")))
+    350          		{
+    351          			Rec_cclk(&AtComRecBuf[strlen("+CCLK:")]);
+    352          		}
+    353          
+    354          		else if (!memcmp("+NCDP:",AtComRecBuf,strlen("+NCDP:")))  //  
+    355          		{
+    356          
+    357          			 if (!memcmp(&AtComRecBuf[strlen("+NCDP:")],(uint8 *)WNip,strlen(WNip)))
+    358          			 {
+    359          				SetReSendDataTime(200);
+    360          				Moudleinfo.send_ATNCDPok = 1;
+    361          				Moudleinfo.AtNRB = 1;
+    362          			 }
+    363          			 else
+    364          			 {
+    365          				Moudleinfo.AtCFUN0=0;
+    366          			 }
+    367          		}
+    368          		else if (!memcmp("+NSONMI:",AtComRecBuf,strlen("+NSONMI:")))  //  +NSONMI:1,3接收到TCP网络数据
+    369          		{
+    370          			data_ptr = strstr(AtComRecBuf,":");
+    371          			if (data_ptr)
+    372          			{
+    373          				data_ptr += 1;
+    374          				sprintf(tempbuf,"AT+NSORF=");
+    375          				j=strlen((char*)tempbuf);
+    376          				for(; *data_ptr != 0x0d; )
+    377          				{
+    378          					tempbuf[j++] = *data_ptr;
+    379          					data_ptr++;
+    380          					if(j  > 30)
+    381          						break;
+    382          				}
+    383          				tempbuf[j++] = '\r';
+    384          				tempbuf[j++] = '\n';
+    385          				tempbuf[j++] = 0;
+    386          				Moudleinfo.QuestAck=0;
+    387          				SendId=ATNSORF;
+    388          				Moudleinfo.SendFlag=1;
+    389          				UART1_SendStr((uint8*)tempbuf,strlen(tempbuf));
+    390          			}
+    391          		}
+    392          		
+    393          
+    394          		else if (!memcmp("+NNMI:",AtComRecBuf,strlen("+NNMI:")))  //  接收到网络数据
+    395          		{
+    396          
+    397          			UdpDatalen=GetIntFromBuf(&AtComRecBuf[strlen("+NNMI:")]);
+    398          			i=0;
+    399          			while (AtComRecBuf[i] !=',' && AtComRecBuf[i] !='\r' && AtComRecBuf[i] !='\n') i++;
+    400          			if (AtComRecBuf[i] ==',')
+    401          			{
+    402          				for (j=0;j<UdpDatalen;j++)
+    403          				{
+    404          					AtComRecBuf[j]=AciiToHex(&AtComRecBuf[i+1+j*2]);
+    405          				}
+    406          				j=ProtoDataAnalyze((uint8*)AtComRecBuf,UdpDatalen);
+    407          				//数据连包处理
+    408          				if(((UdpDatalen-j)>5) && j)
+    409          					ProtoDataAnalyze((uint8*)&AtComRecBuf[j],(UdpDatalen-j));
+    410          			}
+    411          		}
+    412          
+    413          		else if (!memcmp("+CSQ:",AtComRecBuf,strlen("+CSQ:")))  //
+    414          		{
+    415          			if (SendId==AT_CSQ)
+    416          			{
+    417          				Moudleinfo.AtCSQ = 1;
+    418          				Moudleinfo.Csq=GetIntFromBuf(&AtComRecBuf[strlen("+CSQ:")]);
+    419          
+    420          				if (Moudleinfo.Csq>31) 
+    421          					Moudleinfo.Csq=0;
+    422          			}
+    423          		}
+    424          		//BC35模块版本号
+    425          		else if (!memcmp("Revision:",AtComRecBuf,strlen("Revision:"))) 
+    426          		{
+    427          			data_ptr = strstr(AtComRecBuf,":");
+    428          			if (data_ptr)
+    429          			{
+    430          				data_ptr += 2;
+    431          				i = 0;
+    432          				for(; *data_ptr != 0x0d; )
+    433          				{
+    434          					Moudleinfo.Ver[i++] = *data_ptr;
+    435          					data_ptr++;
+    436          					if(i  > 30)
+    437          						break;
+    438          				}
+    439          			}
+    440          			Moudleinfo.Ver[i]=0;
+    441          		}
+    442          		else if (!memcmp("+CGSN:",AtComRecBuf,strlen("+CGSN:")))  //IMEI
+    443          		{
+    444          			if (AtCommRecLen>(2+strlen("+CGSN:")))
+    445          			{
+    446          				memcpy(Moudleinfo.IMEI,&AtComRecBuf[strlen("+CGSN:")],15);
+    447          			}
+    448          		}
+    449          		else if (!memcmp("+NBAND:",AtComRecBuf,strlen("+NBAND:")))  //网络的频段
+    450          		{
+    451          			i = GetIntFromBuf(&AtComRecBuf[strlen("+NBAND:")]);
+    452          
+    453          			 Moudleinfo.AtGetnband = 1;
+    454          			if ((i == 8 && Moudleinfo.ops_type == OPS_CMCC) 
+    455          			||(i == 5 && Moudleinfo.ops_type == OPS_TELECOM)
+    456          			)
+    457          			{
+    458          				Moudleinfo.Atnband=1;
+    459          			}
+    460          			else
+    461          			{
+    462          				Moudleinfo.AtCFUN0=0;
+    463          				Moudleinfo.Atnband=0;
+    464          			}
+    465          		}
+    466          
+    467          		else if (!memcmp("+CFUN:",AtComRecBuf,strlen("+CFUN:")))  //开启全功能模式
+    468          		{
+    469          			i = GetIntFromBuf(&AtComRecBuf[strlen("+CFUN:")]);
+    470          
+    471          			if (i == 1) 
+    472          			{
+    473          				Moudleinfo.AtGetCFUN = 1;
+    474          			}
+    475          			else
+    476          			{
+    477          				Moudleinfo.AtCFUN1 = 0;
+    478          			}
+    479          		}
+    480          		else if (!memcmp("+CEREG:",AtComRecBuf,strlen("+CEREG:")))  //注册网络
+    481          		{
+    482          			i = getAddressFromAT(AtComRecBuf,1);
+    483          			if (i)
+    484          			{
+    485          				j=GetIntFromBuf(&AtComRecBuf[i]);
+    486          				if (j == 1) 
+    487          				{
+    488          					 Moudleinfo.AtGetCEREG = 1;
+    489          					module_at_valid_handle();
+    490          				}
+    491          			}
+    492          		}
+    493          		else if (!memcmp("+CGATT:",AtComRecBuf,strlen("+CGATT:")))  //附着网络
+    494          		{
+    495          			i = GetIntFromBuf(&AtComRecBuf[strlen("+CGATT:")]);
+    496          
+    497          			if (i == 1) 
+    498          			{
+    499          				Moudleinfo.AtGetCGATT = 1;
+    500          				module_at_valid_handle();
+    501          			}
+    502          		}
+    503          		else if (!memcmp("+QLWEVTIND:0",AtComRecBuf,strlen("+QLWEVTIND:0")))  //注册上网络
+    504          		{
+    505          		}
+    506          		else if (!memcmp("+QLWEVTIND:3",AtComRecBuf,strlen("+QLWEVTIND:3")))  //可以向网络发数据
+    507          		{
+    508          		}
+    509          		else if (!memcmp("+NSOSTR:",AtComRecBuf,strlen("+NSOSTR:")))  //+NSOSTR:1,101,1数据发送成功
+    510          		{
+    511          			i = getAddressFromAT(AtComRecBuf,1);
+    512          			if (i)
+    513          			{
+    514          				j=GetIntFromBuf(&AtComRecBuf[i]);
+    515          		 		if((load_continuous_flag==FALSE) && (j==tcp_sequence))
+    516          				{
+    517          					ReSndCount = 0;
+    518          				}
+    519          			}
+    520          		}		
+    521          		else if (!memcmp("+NSOCLI:",AtComRecBuf,strlen("+NSOCLI:")))  //+NSOCLI: 1断开网络
+    522          		{
+    523          			i = GetIntFromBuf(&AtComRecBuf[strlen("+NSOCLI: ")]);
+    524          			if (i == socket_id) 
+    525          			{
+    526          				tcp_had_linked_flag = FALSE;
+    527          				NetBreakHandle();
+    528          			}
+    529          		}
+    530          		else if (!memcmp("SNR:",AtComRecBuf,strlen("SNR:")))  //SINR（信号与干扰加噪声比）
+    531          		{
+    532          			Moudleinfo.sinr=GetIntFromBuf(&AtComRecBuf[strlen("SNR:")]);
+    533          		}
+    534          		else if (!memcmp("Signal power:",AtComRecBuf,strlen("Signal power:")))  //RSRP（NB信号接收功率）
+    535          		{
+    536          			Moudleinfo.rsrp=GetIntFromBuf(&AtComRecBuf[strlen("Signal power:")]);
+    537          			Moudleinfo.AtNUESTATS=1;
+    538          		}
+    539          		else if (!memcmp("PCI:",AtComRecBuf,strlen("PCI:")))  //PCI（物理小区标识）
+    540          		{
+    541          			Moudleinfo.pci=GetIntFromBuf(&AtComRecBuf[strlen("PCI:")]);
+    542          		}
+    543          		 else
+    544          		 {   
+    545          			 if (AtComRecBuf[0]>='0' && AtComRecBuf[0]<='9')
+    546          			 {
+    547          				 if (SendId==ATCIMI)
+    548          				 {
+    549          					 memcpy(Moudleinfo.IMSI,AtComRecBuf,15);
+    550          					 i = AsctoBin(Moudleinfo.IMSI[3])*10+AsctoBin(Moudleinfo.IMSI[4]);
+    551          					 
+    552          					 if((i == 11) || (i == 3) || (i == 5))
+    553          				 	{
+    554          				 		Moudleinfo.ops_type=OPS_TELECOM;
+    555          						Moudleinfo.GetipOk=0;
+    556          						Moudleinfo.send_ATNCDPok=0;
+    557          						Moudleinfo.AtNSOCR=1;
+    558          						Moudleinfo.AtNSOCO=1;
+    559          				 	}
+    560          					 else
+    561          				 	{
+    562          				 		Moudleinfo.ops_type=OPS_CMCC;
+    563          						Moudleinfo.GetipOk=1;
+    564          						Moudleinfo.send_ATNCDPok=1;
+    565          						Moudleinfo.AtNSOCR=0;
+    566          						Moudleinfo.AtNSOCO=0;
+    567          				 	}
+    568          				 }
+    569          				 if (SendId==ATNMGR)
+    570          				 {
+    571          					 UdpDatalen=GetIntFromBuf(AtComRecBuf);
+    572          					 i=0;
+    573          					 while (AtComRecBuf[i] !=',' && AtComRecBuf[i] !='\r' && AtComRecBuf[i] !='\n') i++;
+    574          					 if (AtComRecBuf[i] ==',')
+    575          					 {
+    576          						 for (j=0;j<UdpDatalen;j++)
+    577          						 {
+    578          							 AtComRecBuf[j]=AciiToHex(&AtComRecBuf[i+1+j*2]);
+    579          						 }
+    580          						j=ProtoDataAnalyze((uint8*)AtComRecBuf,UdpDatalen);
+    581          						//数据连包处理
+    582          						if(((UdpDatalen-j)>5) && j)
+    583          							ProtoDataAnalyze((uint8*)&AtComRecBuf[j],(UdpDatalen-j));
+    584          						Moudleinfo.SendFlag=0;
+    585          					 }
+    586          				 }
+    587          				if (SendId==ATNSOCR)
+    588          				{
+    589          					if(AtCommRecLen == 3)
+    590          					{
+    591          						socket_id = AtComRecBuf[0]-'0';
+    592          					}
+    593          				}
+    594          				if (SendId==ATNSORF)
+    595          				{
+    596          					// 1,220.180.239.212,8009,4,01020304,0
+    597          					i = getAddressFromAT(AtComRecBuf,3);
+    598          					if (i)
+    599          					{
+    600          						UdpDatalen=GetIntFromBuf(&AtComRecBuf[i]);
+    601          						while (AtComRecBuf[i] !=',' && AtComRecBuf[i] !='\r' && AtComRecBuf[i] !='\n') i++;
+    602          						if (AtComRecBuf[i] ==',')
+    603          						{
+    604          							for (j=0;j<UdpDatalen;j++)
+    605          							{
+    606          								AtComRecBuf[j]=AciiToHex(&AtComRecBuf[i+1+j*2]);
+    607          							}
+    608          							j=ProtoDataAnalyze((uint8*)AtComRecBuf,UdpDatalen);
+    609          							//数据连包处理
+    610          							if(((UdpDatalen-j)>5) && j)
+    611          								ProtoDataAnalyze((uint8*)&AtComRecBuf[j],(UdpDatalen-j));
+    612          							Moudleinfo.SendFlag=0;
+    613          						}
+    614          					}
+    615          				}
+    616          
+    617          			 }
+    618          			 else
+    619          			 {
+    620          				 if (!memcmp("OK",AtComRecBuf,strlen("OK")))
+    621          				 {
+    622          					Moudleinfo.QuestAck=1;
+    623          
+    624          					if (SendId==ATNMGS) 
+    625          					{
+    626          //						FillOverTimeQueue(QUERY_MSG_OVERTIME_EVENT,50,__LINE__);
+    627          						Moudleinfo.QuestDataFlag=0;
+    628          					}
+    629          
+    630          					 if(SendId==ATNCDP) Moudleinfo.send_ATNCDPok=1;
+    631          
+    632          					 if(SendId==ATNNMI) Moudleinfo.send_ATNNMIok=1;
+    633          					 if(SendId==ATCFUN0) Moudleinfo.AtCFUN0=1;
+    634          					 if(SendId==ATNCSEARFCN) Moudleinfo.AtNCSEARFCN=1;
+    635          					 if(SendId==ATCFUN1) Moudleinfo.AtCFUN1=1;
+    636          					 if(SendId==ATCEDRXS) Moudleinfo.AtCEDRXS=1;
+    637          					 if(SendId==ATCGATT1) 
+    638          					 {
+    639          					 	Moudleinfo.AtCGATT1=1;
+    640          						ppp_had_linked_flag = TRUE;
+    641          					 }
+    642          					 if(SendId==ATCGATT0) 
+    643          					 {
+    644          					 	Moudleinfo.AtCGATT0=1;
+    645          						ppp_had_linked_flag = FALSE;
+    646          					 }
+    647          					if(SendId==ATNBAND) Moudleinfo.Atnband=1;
+    648          					 if(SendId==ATNRB) Moudleinfo.AtNRB=1;
+    649          					 if(SendId==ATGETNCDP) Moudleinfo.GetipOk=1;
+    650          
+    651          					 if(SendId==ATCPSMS) Moudleinfo.CpmsSet=1;
+    652          					 if(SendId==ATQREGSWT) Moudleinfo.AtQREGSWT=1;
+    653          					 if(SendId==ATNSOCR) Moudleinfo.AtNSOCR=1;
+    654          					 if(SendId==ATNSOCO)
+    655          					 {
+    656          					 	Moudleinfo.AtNSOCO=1;
+    657          						tcp_had_linked_flag = TRUE;
+    658          						SetReSendDataTime(0);
+    659          					 }
+    660          					 if(SendId==ATNSOCL)        //关闭tcp
+    661          					 {
+    662          					 	Moudleinfo.AtNSOCL=1;
+    663          						NetBreakHandle();
+    664          						tcp_had_linked_flag = FALSE;
+    665          					 }
+    666          					 Moudleinfo.SendFlag=0;
+    667          		             
+    668          				 }
+    669          			 }
+    670          		}
+    671          		AtCommRecLen=0;
+    672          		rev_NB_data_flag = FALSE;
+    673          	}
+    674          	else
+    675          		NB_module_error_cnt++;
+    676          	if(NB_module_error_cnt >= UART_ERROR_CNT_MAX)
+    677          	{
+    678          		NB_module_error_cnt = 0;
+    679          		if(AtCommRecLen)
+    680          		{
+    681          			AtCommRecLen = 0;
+    682          		}
+    683          	}
+    684          }
+    685          
+    686          void ModuleResetInit(void)
+    687          {
+    688          	memset(Moudleinfo.IMEI,0,sizeof(Moudleinfo.IMEI));
+    689          	memset(Moudleinfo.IMSI,0,sizeof(Moudleinfo.IMSI));
+    690          	Moudleinfo.ops_type=OPS_NULL;
+    691          	Moudleinfo.AtCFUN0=1;
+    692          	Moudleinfo.AtNCSEARFCN=1;
+    693          	Moudleinfo.AtCFUN1=0;
+    694          	Moudleinfo.AtGetCFUN=0;
+    695          	Moudleinfo.AtCEDRXS=0;
+    696          	Moudleinfo.CpmsSet=0;
+    697          	Moudleinfo.AtCGATT0=1;
+    698          	Moudleinfo.AtCGATT1=0;
+    699          	Moudleinfo.AtNRB=0;
+    700          	Moudleinfo.SendFlag=0;
+    701          	Moudleinfo.SendDataTime=0;
+    702          	Moudleinfo.AtQREGSWT = 0;
+    703          	Moudleinfo.AtGetCEREG = 0;
+    704          	Moudleinfo.AtNUESTATS = 0;
+    705          	NoDataTimeCount=0;
+    706          		
+    707          	set_net_state(MODULE_INI_STS);
+    708          	net_link_cclk_flag = FALSE;
+    709          	tcp_had_linked_flag = FALSE;
+    710          	ProAtLen=0; 
+    711          	AtCommRecLen = 0;
+    712          	uart_rx_read = 0;
+    713          	uart_rx_write = 0;
+    714          	GetNBplantformIPandPORT();
+    715          }
+    716          
+    717          //查询模块网络连接状态TRUE为连接上
+    718          uint8 GetNetLinkState(void)
+    719          {
+    720          	if((Moudleinfo.ops_type==OPS_TELECOM)
+    721          		||tcp_had_linked_flag
+    722          		)
+    723          		return TRUE;
+    724          	else
+    725          		return FALSE;
+    726          }
+    727          
+    728          //联网时间超时处理
+    729          void LinkNetTimeOutHandle(void)
+    730          {
+    731          	if(NoDataTimeCount)
+    732          	{
+    733          		NoDataTimeCount--;
+    734          	}
+    735          	if(NoDataTimeCount)
+    736          	{
+    737          		if ((Moudleinfo.SendFlag==0)
+    738          			&&(Moudleinfo.ops_type == OPS_TELECOM)
+    739          			&&(Moudleinfo.QuestDataFlag==0)
+    740          			&&((NoDataTimeCount&0x01)==1)
+    741          			)
+    742          		{
+    743          			if(NoDataTimeCount==1)
+    744          			{
+    745          				UART1_SendStr("AT+QLWULDATAEX=2,AABB,0x0101\r\n",strlen("AT+QLWULDATAEX=2,AABB,0x0101\r\n"));  
+    746          				NoDataTimeCount=0;
+    747          			}
+    748          			else
+    749          			{
+    750          				SendId=ATNMGR;
+    751          				Moudleinfo.SendFlag=1;
+    752          				Moudleinfo.QuestAck=0;
+    753          				UART1_SendStr("AT+NMGR\r\n",strlen("AT+NMGR\r\n"));  //查询数据
+    754          			}
+    755          		}
+    756          		set_sleep_counter_max(KEEP_WORK_MAX_TIME-4);
+    757          	}
+    758          	else if(tcp_had_linked_flag)
+    759          	{
+    760          		ReSndCount = 0;
+    761          		set_net_state(MODULE_WAIT_STS);
+    762          	}
+    763          }
+    764          
+    765          uint8 ModuleIniDisp(void)
+    766          {  
+    767             char tempbuf[64];
+    768          
+    769             if(AtDelayTime)
+    770             	return 0;
+    771             if (Moudleinfo.SendFlag==0)
+    772             {
+    773          	 if (strlen((char*)Moudleinfo.Ver)==0)
+    774           	{
+    775          	    	 Moudleinfo.QuestAck=0;
+    776          		 SendId=ATCGMR;
+    777          //		UART1_SendStr((uint8*)"AT+CGMR\r\n",strlen("AT+CGMR\r\n"));
+    778          		UART1_SendStr("ATI\r\n",strlen("ATI\r\n"));
+    779          		 Moudleinfo.SendFlag=1;
+    780           	}
+    781          	 else if (strlen((char*)Moudleinfo.IMEI)==0)
+    782          	 {
+    783          		 //查询模块的IMEI号
+    784          		Moudleinfo.QuestAck=0;
+    785          		SendId=ATCGSN;
+    786          		UART1_SendStr((uint8*)"AT+CGSN=1\r\n",strlen("AT+CGSN=1\r\n"));
+    787          		Moudleinfo.SendFlag=1;
+    788          	 }
+    789          	 else if (strlen((char*)Moudleinfo.IMSI)==0 )
+    790          	 {
+    791          		Moudleinfo.QuestAck=0;
+    792          		SendId=ATCIMI;
+    793          		UART1_SendStr((uint8*)"AT+CIMI\r\n",strlen("AT+CIMI\r\n"));
+    794          		Moudleinfo.SendFlag=1;
+    795          	 }
+    796          	 else
+    797          	 {
+    798          		 {
+    799          			 if (Moudleinfo.AtGetnband==0)
+    800          			 {
+    801          				Moudleinfo.QuestAck=0;
+    802          				SendId=ATGETNBAND;
+    803          				UART1_SendStr((uint8*)"AT+NBAND?\r\n",strlen("AT+NBAND?\r\n"));
+    804          				Moudleinfo.SendFlag=1;
+    805          			 }
+    806          			 else if (Moudleinfo.GetipOk==0)
+    807          			 {
+    808          				 Moudleinfo.QuestAck=0;
+    809          				 SendId=ATGETNCDP;
+    810          				 UART1_SendStr((uint8*)"AT+NCDP?\r\n",strlen("AT+NCDP?\r\n"));
+    811          				 Moudleinfo.SendFlag=1;
+    812          			 }
+    813                       		 else if (Moudleinfo.AtCFUN0==0)
+    814          			 {
+    815          				 Moudleinfo.QuestAck=0;
+    816          				 SendId=ATCFUN0;
+    817          				 UART1_SendStr((uint8*)"AT+CFUN=0\r\n",strlen("AT+CFUN=0\r\n"));
+    818          				 Moudleinfo.SendFlag=1;   
+    819          				AtDelayTime=100;
+    820          			 }
+    821                       		else	 if (Moudleinfo.AtNCSEARFCN==0)
+    822          			 {
+    823          				 Moudleinfo.QuestAck=0;
+    824          				 SendId=ATNCSEARFCN;
+    825          				 UART1_SendStr((uint8*)"AT+NCSEARFCN\r\n",strlen("AT+NCSEARFCN\r\n"));
+    826          				 Moudleinfo.SendFlag=1;   
+    827          			 }
+    828          			 else  if (Moudleinfo.Atnband==0)
+    829          			 {
+    830          				Moudleinfo.QuestAck=0;
+    831          				SendId=ATNBAND;
+    832          				if(Moudleinfo.ops_type==OPS_TELECOM)
+    833          					UART1_SendStr((uint8*)"AT+NBAND=5\r\n",strlen("AT+NBAND=5\r\n"));
+    834          				else
+    835          					UART1_SendStr((uint8*)"AT+NBAND=8\r\n",strlen("AT+NBAND=8\r\n"));
+    836          				Moudleinfo.SendFlag=1;
+    837          			 }
+    838          		 
+    839                       		else	 if (Moudleinfo.send_ATNCDPok==0)
+    840          			 {
+    841          				  Moudleinfo.QuestAck=0;
+    842          				  SendId=ATNCDP;
+    843          				  sprintf(tempbuf,"AT+NCDP=%s\r\n",WNip);
+    844          				  Moudleinfo.SendFlag=1;
+    845          				  UART1_SendStr((uint8*)tempbuf,strlen(tempbuf));
+    846          			 }
+    847          			 else if (Moudleinfo.AtCFUN1==0)
+    848          			 {
+    849          				 Moudleinfo.QuestAck=0;
+    850          				 SendId=ATCFUN1;
+    851          				 UART1_SendStr((uint8*)"AT+CFUN=1\r\n",strlen("AT+CFUN=1\r\n"));
+    852          				 Moudleinfo.SendFlag=1;   
+    853          			 }
+    854          			 else if (Moudleinfo.AtGetCFUN==0)
+    855          			 {
+    856          				 Moudleinfo.QuestAck=0;
+    857          				 SendId=ATGETCFUN;
+    858          				 UART1_SendStr((uint8*)"AT+CFUN?\r\n",strlen("AT+CFUN?\r\n"));
+    859          				 Moudleinfo.SendFlag=1;   
+    860          			 }
+    861          			 else if (Moudleinfo.AtCGATT1==0)
+    862          			 {
+    863          				 Moudleinfo.QuestAck=0;
+    864          				 SendId=ATCGATT1;
+    865          				 UART1_SendStr((uint8*)"AT+CGATT=1\r\n",strlen("AT+CGATT=1\r\n"));
+    866          				 Moudleinfo.SendFlag=1;   
+    867          			 }
+    868          			 else if (Moudleinfo.AtCEDRXS==0)
+    869          			 {
+    870          				 Moudleinfo.QuestAck=0;
+    871          				 SendId=ATCEDRXS;
+    872          				 UART1_SendStr((uint8*)"AT+CEDRXS=0,5\r\n",strlen("AT+CEDRXS=0,5\r\n"));
+    873          				 Moudleinfo.SendFlag=1;   
+    874          			 }
+    875          			else if (Moudleinfo.CpmsSet==0)
+    876          			{
+    877          				Moudleinfo.QuestAck=0;
+    878          				SendId=ATCPSMS;
+    879          				Moudleinfo.SendFlag=1;
+    880          //				UART1_SendStr("AT+CPSMS=1\r\n",strlen("AT+CPSMS=1\r\n"));
+    881          				UART1_SendStr("AT+CPSMS=1,,,,00000100\r\n",strlen("AT+CPSMS=1,,,,00000100\r\n"));
+    882          			}
+    883          			 else  if (Moudleinfo.AtQREGSWT==0)
+    884          			 {
+    885          				Moudleinfo.QuestAck=0;
+    886          				SendId=ATQREGSWT;
+    887          				if(Moudleinfo.ops_type==OPS_TELECOM)
+    888          					UART1_SendStr((uint8*)"AT+QREGSWT=1\r\n",strlen("AT+QREGSWT=1\r\n"));
+    889          				else
+    890          					UART1_SendStr((uint8*)"AT+QREGSWT=2\r\n",strlen("AT+QREGSWT=2\r\n"));
+    891          				Moudleinfo.SendFlag=1;
+    892          			 }
+    893          			 else if (Moudleinfo.AtGetCEREG==0)
+    894          			 {
+    895          				 Moudleinfo.QuestAck=0;
+    896          				 SendId=ATCEREG;
+    897          				 UART1_SendStr((uint8*)"AT+CEREG?\r\n",strlen("AT+CEREG?\r\n"));
+    898          				 Moudleinfo.SendFlag=1;   
+    899          				AtDelayTime=50;
+    900          				module_at_invalid_handle(60);
+    901          			 }
+    902          			 else if (Moudleinfo.AtGetCGATT==0)
+    903          			 {
+    904          				 Moudleinfo.QuestAck=0;
+    905          				 SendId=ATGETCGATT;
+    906          				 UART1_SendStr((uint8*)"AT+CGATT?\r\n",strlen("AT+CGATT?\r\n"));
+    907          				 Moudleinfo.SendFlag=1;   
+    908          				AtDelayTime=50;
+    909          				module_at_invalid_handle(50);
+    910          			 }
+    911          			 else if (Moudleinfo.AtNUESTATS==0)
+    912          			 {
+    913          				 Moudleinfo.QuestAck=0;
+    914          				 SendId=ATNUESTATS;
+    915          				 UART1_SendStr((uint8*)"AT+NUESTATS\r\n",strlen("AT+NUESTATS\r\n"));
+    916          				 Moudleinfo.SendFlag=1;   
+    917          			 }
+    918          			else if (net_link_cclk_flag==0)
+    919          			{
+    920          				  Moudleinfo.QuestAck=0;
+    921          				  SendId=ATCCLK;
+    922          				  Moudleinfo.SendFlag=1;
+    923          				  AtDelayTime=200;
+    924          				  UART1_SendStr("AT+CCLK?\r\n",strlen("AT+CCLK?\r\n"));
+    925          				  module_at_invalid_handle(10);
+    926          			}
+    927          			else 
+    928          			{
+    929          				return 1;
+    930          			}
+    931          		 }
+    932          	 }
+    933          	if(Moudleinfo.SendFlag==1)
+    934          	{
+    935          		if(g_at_no_response<200)
+    936          			g_at_no_response++;
+    937          	}
+    938             }
+    939          
+    940              return 0;
+    941          
+    942          }
+    943          
+    944          //模块连接TCP网络处理
+    945          void ModuleNetLinkHandle(void)
+    946          {  
+    947          	char tempbuf[60]={0};
+    948          
+    949          	if (g_system_reset_time || (net_link_cclk_flag==FALSE))
+    950          		return;
+    951          	if(GetNetLinkState()==TRUE)
+    952          	{
+    953          		 //发送协议(第一次马上发送，等20秒重发 
+    954          		if (Moudleinfo.SendFlag==0 
+    955          			&& Moudleinfo.SendDataTime==0	
+    956          			)
+    957          		 {
+    958          			if((Moudleinfo.ops_type==OPS_TELECOM)&&(Moudleinfo.AtCSQ==0))
+    959          			{
+    960          				//查询信号
+    961          				Moudleinfo.QuestAck=0;
+    962          				SendId=AT_CSQ;
+    963          				Moudleinfo.SendFlag=1;
+    964          				UART1_SendStr("AT+CSQ\r\n",strlen("AT+CSQ\r\n"));
+    965          			}
+    966          		 	else if(ReSndCount)
+    967          				SendDataToNBmodule();
+    968          			else
+    969          				NetActiveHandle();
+    970          		 }
+    971          	}
+    972          	else if(Moudleinfo.SendFlag==0 && tcp_had_linked_flag==FALSE)   //当有数据需要发送时才去建立链接lcx???
+    973          	{
+    974          		 if (Moudleinfo.AtCGATT1==0)
+    975          		 {
+    976          			 Moudleinfo.QuestAck=0;
+    977          			 SendId=ATCGATT1;
+    978          			 UART1_SendStr((uint8*)"AT+CGATT=1\r\n",strlen("AT+CGATT=1\r\n"));
+    979          			 Moudleinfo.SendFlag=1;   
+    980          		 }
+    981          		 else if (Moudleinfo.AtGetCGATT==0)
+    982          		 {
+    983          			 Moudleinfo.QuestAck=0;
+    984          			 SendId=ATGETCGATT;
+    985          			 UART1_SendStr((uint8*)"AT+CGATT?\r\n",strlen("AT+CGATT?\r\n"));
+    986          			 Moudleinfo.SendFlag=1;   
+    987          			AtDelayTime=50;
+    988          			module_at_invalid_handle(50);
+    989          		 }
+    990          		else if (Moudleinfo.AtCSQ==0)
+    991          		{
+    992          			//查询信号
+    993          			Moudleinfo.QuestAck=0;
+    994          			SendId=AT_CSQ;
+    995          			Moudleinfo.SendFlag=1;
+    996          			UART1_SendStr("AT+CSQ\r\n",strlen("AT+CSQ\r\n"));
+    997          		}
+    998          		else if (Moudleinfo.AtNSOCR==0)
+    999          		 {
+   1000          			  Moudleinfo.QuestAck=0;
+   1001          			  SendId=ATNSOCR;
+   1002          			  sprintf(tempbuf,"AT+NSOCR=STREAM,6,0,1\r\n");
+   1003          			  Moudleinfo.SendFlag=1;
+   1004          			  UART1_SendStr((uint8*)tempbuf,strlen(tempbuf));
+   1005          		 }
+   1006          	     	else	 if (Moudleinfo.AtNSOCO==0)   
+   1007          		 {
+   1008          			 //建立tcp链接
+   1009          			  Moudleinfo.QuestAck=0;
+   1010          			  SendId=ATNSOCO;
+   1011          			  if(g_had_link_manager==FALSE)
+   1012          				  sprintf(tempbuf,"AT+NSOCO=%d,%s,%s\r\n",socket_id,"218.56.11.180","12000");
+   1013          			  else
+   1014          				  sprintf(tempbuf,"AT+NSOCO=%d,%s,%s\r\n",socket_id,Moudleinfo.NB_plantform_IP,Moudleinfo.NB_palntform_PORT);
+   1015          			  Moudleinfo.SendFlag=1;
+   1016          			  UART1_SendStr((uint8*)tempbuf,strlen(tempbuf));
+   1017          		 }
+   1018          	}
+   1019          
+   1020          }
+   1021          
+   1022          //模块断开TCP网络处理
+   1023          void ModuleNetBreakHandle(void)
+   1024          {  
+   1025          	char tempbuf[60]={0};
+   1026          
+   1027          	if(Moudleinfo.ops_type!=OPS_TELECOM)
+   1028          	{
+   1029          		if (Moudleinfo.AtNSOCL==0)
+   1030          		 {
+   1031          			  if (socket_id<16)
+   1032          			  {
+   1033          				Moudleinfo.QuestAck=0;
+   1034          				SendId=ATNSOCL;
+   1035          				sprintf(tempbuf,"AT+NSOCL=%d\r\n",socket_id);
+   1036          				Moudleinfo.SendFlag=1;
+   1037          				UART1_SendStr((uint8*)tempbuf,strlen(tempbuf));
+   1038          			  }
+   1039          			  else Moudleinfo.AtNSOCL=1;
+   1040          		 }
+   1041          		else if (Moudleinfo.AtCGATT0==0)
+   1042          		 {
+   1043          			 Moudleinfo.QuestAck=0;
+   1044          			 SendId=ATCGATT0;
+   1045          			 UART1_SendStr((uint8*)"AT+CGATT=0\r\n",strlen("AT+CGATT=0\r\n"));
+   1046          			 Moudleinfo.SendFlag=1;   
+   1047          		 }
+   1048          	}
+   1049          
+   1050          	//判断有没有数据发送，有就需要改变成发送状态
+   1051          	if (GetNetNeedLinkState()) 
+   1052          	{
+   1053          		if (net_link_cclk_flag)
+   1054          		{
+   1055          			set_net_state(MODULE_SEND_STS);
+   1056          		}
+   1057          	 } 
+   1058          }
+   1059          
+   1060          /**********************************************************************
+   1061          *FUNCTION NAME	: SendDataToNBmodule
+   1062          *FUNCTION		: 发送网络数据函数
+   1063          *MODIFY	DATA	:
+   1064          *INPUT			: none
+   1065          *OUTPUT			: none
+   1066          *RETURN			: none
+   1067          ***********************************************************************/
+   1068          void SendDataToNBmodule(void)
+   1069          {
+   1070          	if(!GetNetLinkState())
+   1071          		return;
+   1072          	if(ReSndCount)
+   1073          	{
+   1074          	 	ReSndCount--;
+   1075          		if(ReSndCount)
+   1076          		{
+   1077          			Moudleinfo.SendFlag=1;
+   1078          			SendId=ATNMGS;
+   1079          			Moudleinfo.QuestAck=0;
+   1080          			SetReSendDataTime(RESEND_DATA_TIME);
+   1081          			UART1_SendStr(ProSendbuf,ProAtLen);
+   1082          			Moudleinfo.QuestDataFlag=1;
+   1083          			set_sleep_counter_max(0);
+   1084          			if(load_continuous_flag == FALSE)
+   1085          			{
+   1086          				if(ReBackNetBag)
+   1087          					SetNoDataTimeCount(NO_NET_DATA_TIME);
+   1088          				else
+   1089          					SetNoDataTimeCount(NET_DATA_MIN_TIME);
+   1090          			}
+   1091          		}
+   1092          		else
+   1093          			set_net_state(MODULE_WAIT_STS);
+   1094          	}
+   1095          }
+   1096          
+   1097          /**********************************************************************
+   1098          *FUNCTION NAME	: SendProToNBmodule
+   1099          *FUNCTION		: 发送网络数据函数
+   1100          *MODIFY	DATA	:
+   1101          *INPUT			: buf发送数据len数据长度， send_type  0普通1白名单回应
+   1102          *OUTPUT			: none
+   1103          *RETURN			: none
+   1104          ***********************************************************************/
+   1105          void SendProToNBmodule(uint8 *buf,uint16 len,uint8 send_type)
+   1106          {
+   1107          	uint16 i,pos;
+   1108          
+   1109          	set_sleep_counter_max(0);
+   1110          
+   1111          	if(send_type == 0)
+   1112          		SetNoDataTimeCount(NET_DATA_MAX_TIME);
+   1113          	ReSndCount = 7;
+   1114          	if(ReBackNetBag)
+   1115          	{
+   1116          		ReSndCount = 2;
+   1117          	}
+   1118          	if(Moudleinfo.ops_type==OPS_TELECOM)
+   1119          	{
+   1120          		sprintf((char*)ProSendbuf,"AT+NMGS=%d,",len);                     //发送udp数据
+   1121          	}
+   1122          	else
+   1123          	{
+   1124          		sprintf((char*)ProSendbuf,"AT+NSOSD=%d,%d,",socket_id,len);       //发送tcp数据
+   1125          	}
+   1126          	pos=strlen((char*)ProSendbuf);
+   1127          	   
+   1128          	for (i=0;i<len;i++)
+   1129          	{
+   1130          		sprintf((char*)&ProSendbuf[pos],"%.2x",buf[i]);
+   1131          		pos+=2;
+   1132          	}
+   1133          	tcp_sequence ++;
+   1134          	if(Moudleinfo.ops_type!=OPS_TELECOM)
+   1135          	{
+   1136          		sprintf((char*)&ProSendbuf[pos],",0x200,%03d",tcp_sequence);       //发送tcp数据方式
+   1137          		pos += 10;
+   1138          	}
+   1139          	sprintf((char*)&ProSendbuf[pos],"\r\n");
+   1140          	pos+=2;
+   1141          
+   1142          	ProAtLen=strlen((char*)ProSendbuf);
+   1143          
+   1144          	SendDataToNBmodule();
+   1145          }
+   1146          
+   1147          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+      21  ?_0
+     128  ?_1
+       7  ?_10
+       7  ?_11
+       9  ?_12
+       2  ?_13
+      10  ?_14
+       7  ?_15
+       6  ?_16
+      10  ?_17
+       7  ?_18
+       8  ?_19
+       2  ?_2
+       7  ?_20
+       8  ?_21
+       8  ?_22
+      13  ?_23
+      13  ?_24
+       9  ?_25
+       9  ?_26
+       5  ?_27
+      14  ?_28
+       5  ?_29
+       9  ?_3
+       3  ?_30
+      31  ?_31
+      10  ?_32
+       6  ?_33
+      12  ?_34
+      10  ?_35
+      12  ?_36
+      11  ?_37
+      12  ?_38
+      15  ?_39
+      16  ?_4
+      13  ?_40
+      13  ?_41
+      13  ?_42
+      12  ?_43
+      11  ?_44
+      13  ?_45
+      16  ?_46
+      25  ?_47
+      15  ?_48
+      15  ?_49
+       6  ?_5
+      12  ?_50
+      12  ?_51
+      14  ?_52
+      11  ?_53
+      60  ?_54
+       9  ?_55
+      24  ?_56
+      20  ?_57
+       6  ?_58
+      60  ?_59
+      14  ?_6
+      14  ?_60
+      13  ?_61
+      12  ?_62
+      16  ?_63
+       5  ?_64
+      12  ?_65
+       3  ?_66
+       6  ?_7
+       6  ?_8
+      10  ?_9
+    1100  AtComRecBuf
+       2  AtCommRecLen
+       1  AtDelayTime
+     327  ComputeTime
+     194  GetNBplantformIPandPORT
+      20  GetNetLinkState
+      39  HW_ModuleReset
+     122  LinkNetTimeOutHandle
+     786  ModuleIniDisp
+     151  ModuleNetBreakHandle
+     408  ModuleNetLinkHandle
+     127  ModuleResetInit
+     124  Moudleinfo
+       2  NB_module_error_cnt
+      21  NetBreakHandle
+       1  NoDataTimeCount
+       2  ProAtLen
+     450  ProSendbuf
+       1  ReSndCount
+    2123  RecAtComFormMoudle
+     300  Rec_cclk
+       1  SendDataErrorTime
+     108  SendDataToNBmodule
+       1  SendId
+     238  SendProToNBmodule
+       4  SetNoDataTimeCount
+       4  SetReSendDataTime
+     109  Uart1RevHandle
+       2  WNip
+       1  g_at_no_response
+     122  getAddressFromAT
+      32  module_at_invalid_handle
+       1  module_at_invalid_time
+      14  module_at_valid_handle
+       1  ppp_had_linked_flag
+      44  reset_module_handle
+       1  rev_NB_data_flag
+       1  socket_id
+      22  strstr
+       1  tcp_had_linked_flag
+       1  tcp_sequence
+
+ 
+ 5 315 bytes in section .far_func.text
+ 1 690 bytes in section .near.bss
+     4 bytes in section .near.data
+   953 bytes in section .near.rodata
+ 
+ 5 293 bytes of CODE  memory (+ 22 bytes shared)
+   953 bytes of CONST memory
+ 1 694 bytes of DATA  memory
+
+Errors: none
+Warnings: none

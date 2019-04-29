@@ -1,0 +1,93 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V2.10.4.157 for STM8                 28/Apr/2019  15:24:12
+# Copyright 2010-2015 IAR Systems AB.
+#
+#    Source file  =  E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\EventQueue.c
+#    Command line =  
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\EventQueue.c" -e
+#        --char_is_signed -On --no_cse --no_unroll --no_inline --no_code_motion
+#        --no_tbaa --no_cross_call --debug --code_model medium --data_model
+#        medium -o
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\"
+#        --dlib_config "C:\Program Files\IAR Systems\Embedded Workbench
+#        7.0\stm8\LIB\dlstm8mmf.h" -lcN
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -lb
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\" -I
+#        "E:\PETPOSITION\KN2000(01)\KAC(3A)_libSystem\Libraries\STM8L15x_StdPeriph_Driver\inc\"
+#        --vregs 16
+#    List file    =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\List\EventQueue.lst
+#    Object file  =  
+#        E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\Project\Debug\Obj\EventQueue.o
+#
+###############################################################################
+
+E:\PETPOSITION\KN2000(01)\KAC(3A)_MainDir\EventQueue.c
+      1          #include <stdio.h>
+      2          #include <stdlib.h>
+      3          #include "string.h"
+      4          #include "sysdefs.h"
+      5          #include "EventQueue.h"
+      6          
+      7          EVENTINFO Eventinfo[EVENTQUEUE_NUM];
+      8          uint8 EventReadPtr,EventWritePtr;
+      9          uint8 EventQueueLock=0;
+     10          uint16 LoseventCount=0;
+     11          
+     12          void FillEventQueue(EVENT_ID_T type,char *buf,uint8 len)
+     13          {
+     14          	uint8 tempwptr;
+     15          	
+     16              EventQueueLock=1;
+     17          
+     18              tempwptr = (EventWritePtr+1) %EVENTQUEUE_NUM;
+     19              if (tempwptr !=EventReadPtr)
+     20          	{
+     21          		Eventinfo[EventWritePtr].type=type;
+     22          		if (buf)
+     23          		{
+     24          			memcpy(Eventinfo[EventWritePtr].buf,buf,len);
+     25          		}
+     26          		EventWritePtr=tempwptr;
+     27          	}
+     28          	else LoseventCount++; 
+     29          
+     30          	EventQueueLock=0;
+     31          }
+     32          
+     33          uint8 GetOneEvent(EVENTINFO *p)
+     34          {
+     35          	if (EventReadPtr !=EventWritePtr)
+     36          	{
+     37          		memcpy(p,&Eventinfo[EventReadPtr],sizeof(EVENTINFO));
+     38          		EventReadPtr =(EventReadPtr+1)%EVENTQUEUE_NUM;
+     39          		return 1;
+     40          	}
+     41          	
+     42          	return 0;
+     43          }
+     44          
+
+   Section sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       1  EventQueueLock
+       1  EventReadPtr
+       1  EventWritePtr
+      64  Eventinfo
+     138  FillEventQueue
+      83  GetOneEvent
+       2  LoseventCount
+
+ 
+ 221 bytes in section .far_func.text
+  69 bytes in section .near.bss
+ 
+ 221 bytes of CODE memory
+  69 bytes of DATA memory
+
+Errors: none
+Warnings: none

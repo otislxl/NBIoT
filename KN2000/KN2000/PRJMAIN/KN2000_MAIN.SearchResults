@@ -1,0 +1,7 @@
+---- ResetExternalFIFO Matches (6 in 3 files) ----
+Pedometer.c (e:\petposition\kn2000(01)\kac(3a)_maindir):      ResetExternalFIFO();
+PedoSupport.c (e:\petposition\kn2000(01)\kac(3a)_maindir):   ResetExternalFIFO();
+PedoSupport.c (e:\petposition\kn2000(01)\kac(3a)_maindir):   ResetExternalFIFO */
+PedoSupport.c (e:\petposition\kn2000(01)\kac(3a)_maindir): void ResetExternalFIFO(void)
+PedoSupport.h (e:\petposition\kn2000(01)\kac(3a)_maindir):   ResetExternalFIFO */
+PedoSupport.h (e:\petposition\kn2000(01)\kac(3a)_maindir): void ResetExternalFIFO(void);
